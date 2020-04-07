@@ -8,6 +8,7 @@
     "start:dev": "tsc -w",
     "prebuild": "rimraf dist",
     "build": "tsc",
+    "postinstall": "npm run build",
     "postbuild": "cpr README.md dist/ && cpr LICENSE dist/ && cpr package.json dist/",
     "npm:publish": "npm run build && cd dist && npm publish",
     "format": "prettier --write \"src/**/*.ts\"",
