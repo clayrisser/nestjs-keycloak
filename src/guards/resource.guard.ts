@@ -7,7 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import KeycloakConnect from 'keycloak-connect';
+import * as KeycloakConnect from 'keycloak-connect';
 import { KEYCLOAK_INSTANCE } from '../constants';
 
 // Temporary until keycloak-connect can have full typescript definitions

@@ -5,7 +5,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import KeycloakConnect from 'keycloak-connect';
+import * as KeycloakConnect from 'keycloak-connect';
 import { KEYCLOAK_INSTANCE } from '../constants';
 
 /**
