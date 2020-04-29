@@ -3,16 +3,16 @@
     "module": "commonjs",
     "declaration": true,
     "removeComments": true,
+    "strictNullChecks": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "target": "es6",
+    "target": "es2017",
     "sourceMap": false,
     "outDir": "./dist",
-    "rootDir": "./src",
-    "baseUrl": "./",
+    "baseUrl": "./src",
     "noLib": false,
-    "esModuleInterop": true
+    "incremental": true,
+    "tsBuildInfoFile": ""
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "dist"]
 }

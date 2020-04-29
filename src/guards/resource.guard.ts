@@ -19,6 +19,19 @@ declare module 'keycloak-connect' {
     ): (req: any, res: any, next: any) => any;
   }
 }
+const createEnforcerContext = (request: any, response: any) => (
+  keycloak: KeycloakConnect.Keycloak,
+  permissions: string[],
+) =>
+  new Promise<boolean>((resolve, reject) =>
+    keycloak.enforcer(permissions)(request, response, (next: any) => {
+      if (request.resourceDenied) {
+        resolve(false);
+      } else {
+        resolve(true);
+      }
+    }),
+  );
 
 /**
  * This adds a resource guard, which is permissive.
@@ -80,17 +93,3 @@ export class ResourceGuard implements CanActivate {
     return context.switchToHttp().getRequest();
   }
 }
-
-const createEnforcerContext = (request: any, response: any) => (
-  keycloak: KeycloakConnect.Keycloak,
-  permissions: string[],
-) =>
-  new Promise<boolean>((resolve, reject) =>
-    keycloak.enforcer(permissions)(request, response, (next: any) => {
-      if (request.resourceDenied) {
-        resolve(false);
-      } else {
-        resolve(true);
-      }
-    }),
-  );

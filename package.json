@@ -1,13 +1,14 @@
 {
   "name": "@cenkce/nest-keycloak-connect",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "keycloak-nodejs-connect module for Nest",
   "author": "John Joshua Ferrer <johnjoshuaferrer@disroot.org>",
+  "contributors": ["Cenk Cetinkaya <mail@cenkcetinkaya.com>"],
   "license": "MIT",
   "scripts": {
     "start:dev": "tsc -w",
     "prebuild": "rimraf dist",
-    "build": "tsc",
+    "build": "tsc || true",
     "postbuild": "cpr README.md dist/ && cpr LICENSE dist/ && cpr package.json dist/",
     "npm:publish": "npm run build && cd dist && npm publish",
     "format": "prettier --write \"src/**/*.ts\"",
@@ -23,24 +24,18 @@
     "url": "https://github.com/ferrerojosh/nest-keycloak-connect"
   },
   "bugs": "https://github.com/ferrerojosh/nest-keycloak-connect/issues",
-  "peerDependencies": {
-    "@nestjs/common": "^6.0.0",
-    "reflect-metadata": "^0.1.12",
-    "rxjs": "^6.0.0"
-  },
   "dependencies": {
-    "keycloak-connect": "^9.0.0"
-  },
-  "devDependencies": {
+    "reflect-metadata": "^0.1.12",
     "@nestjs/common": "^7.0.3",
     "@nestjs/core": "^7.0.3",
-    "@types/express": "4.16.1",
+    "keycloak-connect": "^9.0.2",
+    "request-promise": "^4.2.5"
+  },
+  "devDependencies": {
     "cpr": "^3.0.1",
     "prettier": "^1.19.1",
     "reflect-metadata": "^0.1.12",
     "rimraf": "^3.0.2",
-    "rxjs": "^6.0.0",
-    "ts-node": "^8.6.2",
     "typescript": "^3.8.3"
   }
 }

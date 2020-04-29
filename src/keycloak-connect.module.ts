@@ -1,16 +1,41 @@
 import { DynamicModule, Module, Provider } from '@nestjs/common';
-import Keycloak from 'keycloak-connect';
+import * as Keycloak from 'keycloak-connect';
 import { KEYCLOAK_CONNECT_OPTIONS, KEYCLOAK_INSTANCE } from './constants';
 import { KeycloakConnectModuleAsyncOptions } from './interface/keycloak-connect-module-async-options.interface';
 import { KeycloakConnectOptionsFactory } from './interface/keycloak-connect-options-factory.interface';
-import { KeycloakConnectOptions } from './interface/keycloak-connect-options.interface';
+import { KeycloakController } from './keycloak.controller';
+import { KeycloakService } from './keycloak.service';
 
 export * from './decorators/resource.decorator';
 export * from './decorators/scopes.decorator';
 export * from './guards/auth.guard';
 export * from './guards/resource.guard';
 
-@Module({})
+declare interface KeycloakConnectOptions {
+  /**
+   * Authentication server URL as defined in keycloak.json
+   */
+  authServerUrl: string;
+  /**
+   * Client secret credientials.
+   */
+  secret?: string;
+  /**
+   * Client identifier.
+   */
+  clientId?: string;
+  /**
+   * Keycloak realm.
+   */
+  realm?: string;
+  realmPublicKey?: string;
+}
+
+@Module({
+  controllers: [KeycloakController],
+  providers: [KeycloakService],
+  exports: [KeycloakService]
+})
 export class KeycloakConnectModule {
   public static register(opts: KeycloakConnectOptions): DynamicModule {
     return {
@@ -39,7 +64,7 @@ export class KeycloakConnectModule {
 
   private static createConnectProviders(
     options: KeycloakConnectModuleAsyncOptions,
-  ): Provider {
+  ) {
     if (options.useExisting || options.useFactory) {
       return this.createConnectOptionsProvider(options);
     }

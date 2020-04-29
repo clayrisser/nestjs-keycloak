@@ -6,7 +6,7 @@ export interface KeycloakConnectModuleAsyncOptions
   extends Pick<ModuleMetadata, 'imports'> {
   inject?: any[];
   useExisting?: Type<KeycloakConnectOptionsFactory>;
-  useClass?: Type<KeycloakConnectOptionsFactory>;
+  useClass: Type<KeycloakConnectOptionsFactory>;
   useFactory?: (
     ...args: any[]
   ) => Promise<KeycloakConnectOptions> | KeycloakConnectOptions;
