@@ -3,7 +3,9 @@
   "version": "1.1.0",
   "description": "keycloak-nodejs-connect module for Nest",
   "author": "John Joshua Ferrer <johnjoshuaferrer@disroot.org>",
-  "contributors": ["Cenk Cetinkaya <mail@cenkcetinkaya.com>"],
+  "contributors": [
+    "Cenk Cetinkaya <mail@cenkcetinkaya.com>"
+  ],
   "license": "MIT",
   "scripts": {
     "start:dev": "tsc -w",
