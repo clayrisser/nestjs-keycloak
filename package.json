@@ -1,6 +1,6 @@
 {
   "name": "@codejamninja/nest-keycloak-connect",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "keycloak-nodejs-connect module for Nest",
   "author": "Jam Risser <jam@codejam.ninja>",
   "contributors": [
