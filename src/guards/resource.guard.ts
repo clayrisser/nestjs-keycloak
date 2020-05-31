@@ -1,4 +1,4 @@
-import * as KeycloakConnect from 'keycloak-connect';
+import KeycloakConnect, { Keycloak } from 'keycloak-connect';
 import { Reflector } from '@nestjs/core';
 import {
   CanActivate,
@@ -10,8 +10,6 @@ import {
 } from '@nestjs/common';
 import { KEYCLOAK_INSTANCE } from '../constants';
 
-// Temporary until keycloak-connect can have full typescript definitions
-// This is as of version 9.0.0
 declare module 'keycloak-connect' {
   interface Keycloak {
     enforcer(
@@ -19,26 +17,7 @@ declare module 'keycloak-connect' {
     ): (req: any, res: any, next: any) => any;
   }
 }
-const createEnforcerContext = (request: any, response: any) => (
-  keycloak: KeycloakConnect.Keycloak,
-  permissions: string[]
-) => {
-  return new Promise<boolean>((resolve) =>
-    keycloak.enforcer(permissions)(request, response, (_next: any) => {
-      if (request.resourceDenied) {
-        resolve(false);
-      } else {
-        resolve(true);
-      }
-    })
-  );
-};
 
-/**
- * This adds a resource guard, which is permissive.
- * Only controllers annotated with `@Resource` and methods with `@Scopes`
- * are handled by this guard.
- */
 @Injectable()
 export class ResourceGuard implements CanActivate {
   logger = new Logger(ResourceGuard.name);
@@ -52,21 +31,18 @@ export class ResourceGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const resource = this.reflector.get<string>('resource', context.getClass());
     const scopes = this.reflector.get<string[]>('scopes', context.getHandler());
-    // No resource given, since we are permissive, allow
     if (!resource) return true;
     this.logger.verbose(
       `Protecting resource '${resource}' with scopes: [ ${scopes} ]`
     );
-    // No scopes given, since we are permissive, allow
     if (!scopes) return true;
-    // Build permissions
     const permissions = scopes.map((scope) => `${resource}:${scope}`);
-    const [request, response] = [
-      this.getRequest(context),
+    const [req, res] = [
+      context.switchToHttp().getRequest(),
       context.switchToHttp().getResponse()
     ];
-    const user = request.user.preferred_username;
-    const enforcerFn = createEnforcerContext(request, response);
+    const user = req.user.preferred_username;
+    const enforcerFn = createEnforcerContext(req, res);
     const isAllowed = await enforcerFn(this.keycloak, permissions);
     if (!isAllowed) {
       this.logger.verbose(`Resource '${resource}' denied to '${user}'.`);
@@ -75,8 +51,18 @@ export class ResourceGuard implements CanActivate {
     this.logger.verbose(`Resource '${resource}' granted to '${user}'.`);
     return true;
   }
+}
 
-  getRequest<T = any>(context: ExecutionContext): T {
-    return context.switchToHttp().getRequest();
-  }
+function createEnforcerContext(req: any, res: any) {
+  return (keycloak: Keycloak, permissions: string[]) => {
+    return new Promise<boolean>((resolve) =>
+      keycloak.enforcer(permissions)(req, res, (_next: any) => {
+        if (req.resourceDenied) {
+          resolve(false);
+        } else {
+          resolve(true);
+        }
+      })
+    );
+  };
 }

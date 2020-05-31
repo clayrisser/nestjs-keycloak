@@ -1,1 +1,1 @@
-export * from './keycloak-connect.module';
+export * from './keycloak.module';

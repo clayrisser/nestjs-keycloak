@@ -1,5 +1,7 @@
-import * as KeycloakConnect from 'keycloak-connect';
+import KeycloakConnect from 'keycloak-connect';
+import { IncomingHttpHeaders } from 'http';
 import { Reflector } from '@nestjs/core';
+import { Request } from 'express';
 import {
   CanActivate,
   ExecutionContext,
@@ -9,22 +11,8 @@ import {
   UnauthorizedException
 } from '@nestjs/common';
 import { KEYCLOAK_INSTANCE } from '../constants';
-import { KeycloakedRequest } from '../keycloaked-request';
+import { KeycloakedRequest } from '../types';
 
-declare module 'keycloak-connect' {
-  interface GrantType {
-    access_token?: KeycloakConnect.Token;
-    expires_in?: string;
-    id_token?: string;
-    refresh_token?: string;
-    token_type?: string;
-  }
-}
-
-/**
- * An authentication guard. Will return a 401 unauthorized when it is unable to
- * verify the JWT token or Bearer header is missing.
- */
 @Injectable()
 export class AuthGuard implements CanActivate {
   logger = new Logger(AuthGuard.name);
@@ -36,9 +24,7 @@ export class AuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request: KeycloakedRequest<Request> = context
-      .switchToHttp()
-      .getRequest();
+    const req: KeycloakedRequest<Request> = context.switchToHttp().getRequest();
     const isPublic = !!this.reflector.get<string>(
       'public-path',
       context.getHandler()
@@ -47,37 +33,37 @@ export class AuthGuard implements CanActivate {
       'roles',
       context.getHandler()
     );
-    const jwt = this.extractJwt(request.headers);
+    const jwt = this.extractJwt(req.headers);
     let grant: KeycloakConnect.Grant | undefined;
     if (jwt) {
-      grant = await this.keycloak.grantManager.createGrant({
-        access_token: jwt
-      });
-    } else if (request.session?.token) {
-      grant = await this.keycloak.grantManager.createGrant({
-        access_token:
-          request.session.accessToken ||
-          request.session.access_token ||
-          request.session.token
-      });
+      grant = await this.keycloak.grantManager.createGrant(
+        JSON.stringify({
+          access_token: jwt
+        })
+      );
+    } else if (req.session?.token) {
+      grant = await this.keycloak.grantManager.createGrant(
+        JSON.stringify({
+          access_token: req.session.token
+        })
+      );
     } else if (isPublic === false) throw new UnauthorizedException();
     if (grant) {
-      request.grant = (grant as any) as KeycloakConnect.GrantType;
-      if (!grant.isExpired() && !request.session.authUser) {
-        // Attach user info to the session
+      req.grant = grant;
+      if (!grant.isExpired() && !req.session.authUser) {
         const user =
           grant.access_token &&
           (await this.keycloak.grantManager.userInfo(grant.access_token));
-        request.session.authUser = user;
+        req.session.user = user;
       }
-      request.user = request.session.authUser;
-      if (roles && request.grant) {
+      req.user = req.session.user;
+      if (roles && req.grant) {
         return roles.some((role) =>
           Array.isArray(role)
             ? role.every((innerRole) =>
-                request.grant?.access_token?.hasRole(innerRole)
+                req.grant?.access_token?.hasRole(innerRole)
               )
-            : request.grant?.access_token?.hasRole(role)
+            : req.grant?.access_token?.hasRole(role)
         );
       }
       return true;
@@ -86,8 +72,11 @@ export class AuthGuard implements CanActivate {
     return false;
   }
 
-  extractJwt(headers: Headers) {
-    const auth = headers['authorization']?.split(' ');
+  extractJwt(headers: IncomingHttpHeaders) {
+    const { authorization } = headers;
+    if (typeof authorization === 'undefined') return null;
+    if (authorization?.indexOf(' ') <= -1) return authorization;
+    const auth = authorization?.split(' ');
     if (auth && auth[0] && auth[0].toLowerCase() === 'bearer') return auth[1];
     return null;
   }

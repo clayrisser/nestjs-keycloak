@@ -1,76 +1,47 @@
-# Contributor Covenant Code of Conduct
+# Contributing
 
-## Our Pledge
+We accept contributions of every kind: documentation, code, artwork. Any help is greatly
+appreciated. This document contains everything needed to get started with your first contribution.
 
-In the interest of fostering an open and welcoming environment, we as
-contributors and maintainers pledge to make participation in our project and
-our community a harassment-free experience for everyone, regardless of age, body
-size, disability, ethnicity, sex characteristics, gender identity and expression,
-level of experience, education, socio-economic status, nationality, personal
-appearance, race, religion, or sexual identity and orientation.
+## Contributing Code
 
-## Our Standards
+We keep the source code on [GitHub](https://www.github.com) and take contributions through
+[GitHub pull requests](https://help.github.com/articles/using-pull-requests).
 
-Examples of behavior that contributes to creating a positive environment
-include:
+For smaller patches and bug fixes just go ahead and either report an issue or submit a pull
+request.
 
-- Using welcoming and inclusive language
-- Being respectful of differing viewpoints and experiences
-- Gracefully accepting constructive criticism
-- Focusing on what is best for the community
-- Showing empathy towards other community members
+It is usually a good idea to discuss major changes with the developers, this will help us
+determine whether the contribution would be a good fit for the project and if it is likely to be
+accepted. There's nothing worse than seeing your hard work being rejected because it falls outside
+of the scope of the project.
 
-Examples of unacceptable behavior by participants include:
+Make sure your editor respects the [EditorConfig](http://editorconfig.org) configuration file we
+put at the root of the repository.
 
-- The use of sexualized language or imagery and unwelcome sexual attention or
-  advances
-- Trolling, insulting/derogatory comments, and personal or political attacks
-- Public or private harassment
-- Publishing others' private information, such as a physical or electronic
-  address, without explicit permission
-- Other conduct which could reasonably be considered inappropriate in a
-  professional setting
+We follow [GitHub Flow](http://scottchacon.com/2011/08/31/github-flow.html) as our git workflow of
+choice which boils down to:
 
-## Our Responsibilities
+- The `master` branch is always stable and deployable.
+- To work on something new, branch off `master` and give the new branch a descriptive name (e.g.:
+  `sort-packages-by-name`, `issue-32`, etc).
+- Regularly **rebase** that branch against `master` and push your work to a branch with the same
+  name on the server.
+- When you need feedback, help or think you are ready,
+  [submit a pull request](https://help.github.com/articles/using-pull-requests).
+- Once the branch has been merged (or rebased) into `master`, delete it from both your local and
+  remote repository.
 
-Project maintainers are responsible for clarifying the standards of acceptable
-behavior and are expected to take appropriate and fair corrective action in
-response to any instances of unacceptable behavior.
+We invite you to follow
+[these guidelines](http://who-t.blogspot.de/2009/12/on-commit-messages.html) to write useful
+commit messages.
 
-Project maintainers have the right and responsibility to remove, edit, or
-reject comments, commits, code, wiki edits, issues, and other contributions
-that are not aligned to this Code of Conduct, or to ban temporarily or
-permanently any contributor for other behaviors that they deem inappropriate,
-threatening, offensive, or harmful.
+Additionally, you don't need to add entries to the [CHANGELOG.md](CHANGELOG.md) file, this is our
+responsibility.
 
-## Scope
+## Reading List
 
-This Code of Conduct applies within all project spaces, and it also applies when
-an individual is representing the project or its community in public spaces.
-Examples of representing a project or community include using an official
-project e-mail address, posting via an official social media account, or acting
-as an appointed representative at an online or offline event. Representation of
-a project may be further defined and clarified by project maintainers.
-
-## Enforcement
-
-Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported by contacting the project team at [INSERT EMAIL ADDRESS]. All
-complaints will be reviewed and investigated and will result in a response that
-is deemed necessary and appropriate to the circumstances. The project team is
-obligated to maintain confidentiality with regard to the reporter of an incident.
-Further details of specific enforcement policies may be posted separately.
-
-Project maintainers who do not follow or enforce the Code of Conduct in good
-faith may face temporary or permanent repercussions as determined by other
-members of the project's leadership.
-
-## Attribution
-
-This Code of Conduct is adapted from the [Contributor Covenant][homepage], version 1.4,
-available at https://www.contributor-covenant.org/version/1/4/code-of-conduct.html
-
-[homepage]: https://www.contributor-covenant.org
-
-For answers to common questions about this code of conduct, see
-https://www.contributor-covenant.org/faq
+- [GitHub Flow](http://scottchacon.com/2011/08/31/github-flow.html)
+- [Keep a Changelog](http://keepachangelog.com/)
+- [On Commit Messages](http://who-t.blogspot.de/2009/12/on-commit-messages.html)
+- [Semantic Versioning](http://semver.org/)
