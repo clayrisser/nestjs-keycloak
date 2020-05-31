@@ -1,4 +1,4 @@
-import KeycloakConnect from 'keycloak-connect';
+import { Grant, Keycloak } from 'keycloak-connect';
 import { IncomingHttpHeaders } from 'http';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
@@ -19,7 +19,7 @@ export class AuthGuard implements CanActivate {
 
   constructor(
     @Inject(KEYCLOAK_INSTANCE)
-    private keycloak: KeycloakConnect.Keycloak,
+    private keycloak: Keycloak,
     private reflector: Reflector
   ) {}
 
@@ -34,7 +34,7 @@ export class AuthGuard implements CanActivate {
       context.getHandler()
     );
     const jwt = this.extractJwt(req.headers);
-    let grant: KeycloakConnect.Grant | undefined;
+    let grant: Grant | undefined;
     if (jwt) {
       grant = await this.keycloak.grantManager.createGrant(
         JSON.stringify({
