@@ -1,17 +1,15 @@
 import axios from 'axios';
 import qs from 'qs';
 import { Injectable, Inject, Scope } from '@nestjs/common';
-import { Keycloak } from 'keycloak-connect';
 import { REQUEST } from '@nestjs/core';
 import { Request } from 'express';
-import { KEYCLOAK_CONNECT_OPTIONS, KEYCLOAK_INSTANCE } from './constants';
+import { KEYCLOAK_CONNECT_OPTIONS } from './constants';
 import { KeycloakConnectOptions } from './interface/keycloak-connect-options.interface';
 import { KeycloakedRequest } from './types';
 
 @Injectable({ scope: Scope.REQUEST })
 export class KeycloakService {
   constructor(
-    @Inject(KEYCLOAK_INSTANCE) private keycloak: Keycloak,
     @Inject(KEYCLOAK_CONNECT_OPTIONS) private options: KeycloakConnectOptions,
     @Inject(REQUEST) private req: KeycloakedRequest<Request>
   ) {}
@@ -46,9 +44,14 @@ export class KeycloakService {
         `${this.options.authServerUrl}/realms/${this.options.realm}/protocol/openid-connect/token`,
         data
       );
-      this.req.grant = (await this.keycloak.grantManager.createGrant({
-        access_token: res.data.access_token as any
-      })) as any;
+      if (this.req.session) {
+        if (res.data.access_token?.length) {
+          this.req.session.token = res.data.access_token;
+        }
+        if (res.data.refresh_token?.length) {
+          this.req.session.refreshToken = res.data.refresh_token;
+        }
+      }
       return {
         accessToken: res.data.access_token,
         expiresIn: res.data.expires_in,

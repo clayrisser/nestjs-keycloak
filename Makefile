@@ -17,7 +17,7 @@ prepare:
 .PHONY: format
 format: install
 	-@eslint --fix --ext .js,.jsx,.ts,.tsx . 2>$(NULL)
-	@prettier --write ./**/*.{json,md,scss,yaml,yml,js,jsx,ts,tsx} --ignore-path .gitignore
+	@prettier --write ./**/*.{json,md,ts} --ignore-path .gitignore
 	@$(MKDIRP) node_modules/.make && $(TOUCH) -m node_modules/.make/format
 node_modules/.make/format: $(shell $(GIT) ls-files | $(GREP) "\.(j|t)sx?$$")
 	@$(MAKE) -s format

@@ -1,5 +1,6 @@
 import KeycloakConnect, { Keycloak } from 'keycloak-connect';
 import { Reflector } from '@nestjs/core';
+import { Request, Response } from 'express';
 import {
   CanActivate,
   ExecutionContext,
@@ -9,6 +10,7 @@ import {
   Logger
 } from '@nestjs/common';
 import { KEYCLOAK_INSTANCE } from '../constants';
+import { KeycloakedRequest } from '../types';
 
 declare module 'keycloak-connect' {
   interface Keycloak {
@@ -37,11 +39,9 @@ export class ResourceGuard implements CanActivate {
     );
     if (!scopes) return true;
     const permissions = scopes.map((scope) => `${resource}:${scope}`);
-    const [req, res] = [
-      context.switchToHttp().getRequest(),
-      context.switchToHttp().getResponse()
-    ];
-    const user = req.user.preferred_username;
+    const req: KeycloakedRequest<Request> = context.switchToHttp().getRequest();
+    const res: Response = context.switchToHttp().getResponse();
+    const user = req.user?.preferred_username;
     const enforcerFn = createEnforcerContext(req, res);
     const isAllowed = await enforcerFn(this.keycloak, permissions);
     if (!isAllowed) {

@@ -11,6 +11,8 @@ export * from './decorators/roles.decorator';
 export * from './decorators/scopes.decorator';
 export * from './guards/auth.guard';
 export * from './guards/resource.guard';
+export * from './keycloak.service';
+export * from './types';
 
 declare interface KeycloakConnectOptions {
   authServerUrl: string;

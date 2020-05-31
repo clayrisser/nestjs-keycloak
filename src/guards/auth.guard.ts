@@ -1,4 +1,4 @@
-import { Grant, Keycloak } from 'keycloak-connect';
+import { Grant, Keycloak, Token } from 'keycloak-connect';
 import { IncomingHttpHeaders } from 'http';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
@@ -11,7 +11,8 @@ import {
   UnauthorizedException
 } from '@nestjs/common';
 import { KEYCLOAK_INSTANCE } from '../constants';
-import { KeycloakedRequest } from '../types';
+import { KeycloakService } from '../keycloak.service';
+import { KeycloakedRequest, UserInfo } from '../types';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -19,8 +20,9 @@ export class AuthGuard implements CanActivate {
 
   constructor(
     @Inject(KEYCLOAK_INSTANCE)
-    private keycloak: Keycloak,
-    private reflector: Reflector
+    private readonly keycloak: Keycloak,
+    private readonly reflector: Reflector,
+    private readonly keycloakService: KeycloakService
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -33,30 +35,38 @@ export class AuthGuard implements CanActivate {
       'roles',
       context.getHandler()
     );
-    const jwt = this.extractJwt(req.headers);
+    const accessToken = this.extractJwt(req.headers) || req.session?.token;
     let grant: Grant | undefined;
-    if (jwt) {
+    if (accessToken?.length) {
       grant = await this.keycloak.grantManager.createGrant(
-        JSON.stringify({
-          access_token: jwt
-        })
+        JSON.stringify({ access_token: accessToken })
       );
-    } else if (req.session?.token) {
-      grant = await this.keycloak.grantManager.createGrant(
-        JSON.stringify({
-          access_token: req.session.token
-        })
-      );
+      if (
+        req.session?.token &&
+        req.session?.refreshToken &&
+        grant.isExpired()
+      ) {
+        const result = await this.keycloakService.authenticate({
+          refreshToken: req.session.refreshToken
+        });
+        req.session.token = result.accessToken;
+        req.session.refreshToken = result.refreshToken;
+        grant = await this.keycloak.grantManager.createGrant(
+          JSON.stringify({ access_token: req.session.token })
+        );
+      }
     } else if (isPublic === false) throw new UnauthorizedException();
     if (grant) {
       req.grant = grant;
-      if (!grant.isExpired() && !req.session.authUser) {
+      if (!grant.isExpired() && !req.session?.user) {
         const user =
           grant.access_token &&
-          (await this.keycloak.grantManager.userInfo(grant.access_token));
-        req.session.user = user;
+          (await this.keycloak.grantManager.userInfo<Token | string, UserInfo>(
+            grant.access_token
+          ));
+        if (req.session) req.session.user = user;
       }
-      req.user = req.session.user;
+      req.user = req.session?.user;
       if (roles && req.grant) {
         return roles.some((role) =>
           Array.isArray(role)
