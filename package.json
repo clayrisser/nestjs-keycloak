@@ -1,6 +1,6 @@
 {
   "name": "nestjs-keycloak",
-  "version": "1.2.5",
+  "version": "1.2.8",
   "description": "nestjs keycloak module",
   "keywords": [
     "nestjs-keycloak"

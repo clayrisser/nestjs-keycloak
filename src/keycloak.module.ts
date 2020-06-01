@@ -1,9 +1,11 @@
 import KeycloakConnect from 'keycloak-connect';
 import { DynamicModule, Global, Module, Provider } from '@nestjs/common';
 import { KEYCLOAK_CONNECT_OPTIONS, KEYCLOAK_INSTANCE } from './constants';
-import { KeycloakConnectModuleAsyncOptions } from './interface/keycloak-connect-module-async-options.interface';
-import { KeycloakConnectOptionsFactory } from './interface/keycloak-connect-options-factory.interface';
 import { KeycloakService } from './keycloak.service';
+import {
+  KeycloakConnectOptionsFactory,
+  KeycloakConnectModuleAsyncOptions
+} from './types';
 
 export * from './decorators/publicPath.decorator';
 export * from './decorators/resource.decorator';
@@ -48,7 +50,10 @@ export class KeycloakConnectModule {
     return {
       module: KeycloakConnectModule,
       imports: options.imports || [],
-      providers: [this.createConnectProviders(options), this.keycloakProvider],
+      providers: [
+        this.createConnectProviders(options) as any,
+        this.keycloakProvider
+      ],
       exports: [this.keycloakProvider]
     };
   }
@@ -59,10 +64,15 @@ export class KeycloakConnectModule {
     if (options.useExisting || options.useFactory) {
       return this.createConnectOptionsProvider(options);
     }
-    return {
-      provide: options.useClass,
-      useClass: options.useClass
-    };
+    if (!options.useClass) {
+      return {
+        provide: options.useClass,
+        useClass: options.useClass
+      };
+    }
+    throw new Error(
+      "registerAsync must have 'useExisting', 'useFactory', or 'useClass'"
+    );
   }
 
   private static createConnectOptionsProvider(
@@ -70,16 +80,16 @@ export class KeycloakConnectModule {
   ): Provider {
     if (options.useFactory) {
       return {
+        inject: options.inject || [],
         provide: KEYCLOAK_CONNECT_OPTIONS,
-        useFactory: options.useFactory,
-        inject: options.inject || []
+        useFactory: options.useFactory
       };
     }
     return {
       provide: KEYCLOAK_CONNECT_OPTIONS,
       useFactory: async (optionsFactory: KeycloakConnectOptionsFactory) =>
         await optionsFactory.createKeycloakConnectOptions(),
-      inject: [options.useExisting || options.useClass]
+      inject: [options.useExisting || (options.useClass as any)]
     };
   }
 

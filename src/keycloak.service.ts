@@ -4,8 +4,7 @@ import { Injectable, Inject, Scope } from '@nestjs/common';
 import { REQUEST } from '@nestjs/core';
 import { Request } from 'express';
 import { KEYCLOAK_CONNECT_OPTIONS } from './constants';
-import { KeycloakConnectOptions } from './interface/keycloak-connect-options.interface';
-import { KeycloakedRequest } from './types';
+import { KeycloakedRequest, KeycloakConnectOptions } from './types';
 
 @Injectable({ scope: Scope.REQUEST })
 export class KeycloakService {
