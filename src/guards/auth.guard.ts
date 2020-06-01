@@ -7,8 +7,7 @@ import {
   ExecutionContext,
   Inject,
   Injectable,
-  Logger,
-  UnauthorizedException
+  Logger
 } from '@nestjs/common';
 import { KEYCLOAK_INSTANCE } from '../constants';
 import { KeycloakService } from '../keycloak.service';
@@ -22,8 +21,48 @@ export class AuthGuard implements CanActivate {
     @Inject(KEYCLOAK_INSTANCE)
     private readonly keycloak: Keycloak,
     private readonly reflector: Reflector,
-    private readonly keycloakService: KeycloakService
+    @Inject('KeycloakService') private readonly keycloakService: KeycloakService
   ) {}
+
+  async getGrant(
+    req: KeycloakedRequest<Request>,
+    accessToken?: string
+  ): Promise<Grant | null> {
+    const accessGrant = !!accessToken?.length;
+    if (!accessToken && req.session?.refreshToken?.length) {
+      try {
+        const result = await this.keycloakService.authenticate({
+          refreshToken: req.session.refreshToken
+        });
+        accessToken = result.accessToken;
+        req.session.token = result.accessToken;
+        req.session.refreshToken = result.refreshToken;
+      } catch (err) {
+        this.logger.error(err.statusCode, JSON.stringify(err.payload));
+        if (err.statusCode < 500) return null;
+        if (err.payload && err.statusCode) {
+          this.logger.error(err.statusCode, JSON.stringify(err.payload));
+        }
+        throw err;
+      }
+    }
+    if (!accessToken) return null;
+    try {
+      const grant = await this.keycloak.grantManager.createGrant({
+        access_token: accessToken as any
+      });
+      if (accessGrant && grant.isExpired()) return this.getGrant(req);
+      return grant;
+    } catch (err) {
+      if (
+        err.message !==
+        'Grant validation failed. Reason: invalid token (expired)'
+      ) {
+        throw err;
+      }
+      return this.getGrant(req);
+    }
+  }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req: KeycloakedRequest<Request> = context.switchToHttp().getRequest();
@@ -31,31 +70,18 @@ export class AuthGuard implements CanActivate {
       'public-path',
       context.getHandler()
     );
+    if (isPublic) return true;
     const roles = this.reflector.get<(string | string[])[]>(
       'roles',
       context.getHandler()
     );
     const accessToken = this.extractJwt(req.headers) || req.session?.token;
-    let grant: Grant | undefined;
+    let grant: Grant | null = null;
     if (accessToken?.length) {
-      grant = await this.keycloak.grantManager.createGrant(
-        JSON.stringify({ access_token: accessToken })
-      );
-      if (
-        req.session?.token &&
-        req.session?.refreshToken &&
-        grant.isExpired()
-      ) {
-        const result = await this.keycloakService.authenticate({
-          refreshToken: req.session.refreshToken
-        });
-        req.session.token = result.accessToken;
-        req.session.refreshToken = result.refreshToken;
-        grant = await this.keycloak.grantManager.createGrant(
-          JSON.stringify({ access_token: req.session.token })
-        );
-      }
-    } else if (isPublic === false) throw new UnauthorizedException();
+      grant = await this.getGrant(req, accessToken);
+    } else if (req.session?.refreshToken) {
+      grant = await this.getGrant(req);
+    } else if (isPublic === false) return false;
     if (grant) {
       req.grant = grant;
       if (!grant.isExpired() && !req.session?.user) {
@@ -78,7 +104,6 @@ export class AuthGuard implements CanActivate {
       }
       return true;
     }
-    if (isPublic) return true;
     return false;
   }
 

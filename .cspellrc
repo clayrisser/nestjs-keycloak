@@ -1,5 +1,9 @@
 {
   "language": "en",
   "version": "0.1",
-  "words": []
+  "words": [
+    "keycloak",
+    "keycloaked",
+    "nestjs"
+  ]
 }
