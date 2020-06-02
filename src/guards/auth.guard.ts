@@ -83,25 +83,26 @@ export class AuthGuard implements CanActivate {
       grant = await this.getGrant(req);
     } else if (isPublic === false) return false;
     if (grant) {
-      req.grant = grant;
       if (grant.isExpired()) return false;
-      if (!req.session?.user) {
-        const user =
+      req.grant = grant;
+      if (req.session?.user) {
+        req.user = req.session.user;
+      } else {
+        req.user =
           grant.access_token &&
           (await this.keycloak.grantManager.userInfo<Token | string, UserInfo>(
             grant.access_token
           ));
-        if (req.session) req.session.user = user;
-        req.user = user;
+        if (req.session) req.session.user = req.user;
       }
       if (roles && req.grant) {
-        return roles.some((role) =>
-          Array.isArray(role)
+        return roles.some((role) => {
+          return Array.isArray(role)
             ? role.every((innerRole) =>
                 req.grant?.access_token?.hasRole(innerRole)
               )
-            : req.grant?.access_token?.hasRole(role)
-        );
+            : req.grant?.access_token?.hasRole(role);
+        });
       }
       return true;
     }

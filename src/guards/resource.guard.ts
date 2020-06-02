@@ -4,7 +4,6 @@ import { Request, Response } from 'express';
 import {
   CanActivate,
   ExecutionContext,
-  ForbiddenException,
   Inject,
   Injectable,
   Logger
@@ -32,21 +31,23 @@ export class ResourceGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const resource = this.reflector.get<string>('resource', context.getClass());
-    const scopes = this.reflector.get<string[]>('scopes', context.getHandler());
-    if (!resource) return true;
+    const scopes =
+      this.reflector.get<string[]>('scopes', context.getHandler()) || [];
+    if (!resource || !scopes.length) return true;
     this.logger.verbose(
       `Protecting resource '${resource}' with scopes: [ ${scopes} ]`
     );
-    if (!scopes) return true;
-    const permissions = scopes.map((scope) => `${resource}:${scope}`);
+    if (!scopes.length) return true;
     const req: KeycloakedRequest<Request> = context.switchToHttp().getRequest();
+    if (!req.user) return false;
+    const permissions = scopes.map((scope) => `${resource}:${scope}`);
     const res: Response = context.switchToHttp().getResponse();
     const user = req.user?.preferred_username;
     const enforcerFn = createEnforcerContext(req, res);
     const isAllowed = await enforcerFn(this.keycloak, permissions);
     if (!isAllowed) {
       this.logger.verbose(`Resource '${resource}' denied to '${user}'.`);
-      throw new ForbiddenException();
+      return false;
     }
     this.logger.verbose(`Resource '${resource}' granted to '${user}'.`);
     return true;
@@ -54,15 +55,16 @@ export class ResourceGuard implements CanActivate {
 }
 
 function createEnforcerContext(req: any, res: any) {
+  req.kauth = { grant: req.grant };
   return (keycloak: Keycloak, permissions: string[]) => {
-    return new Promise<boolean>((resolve) =>
-      keycloak.enforcer(permissions)(req, res, (_next: any) => {
+    return new Promise<boolean>((resolve) => {
+      return keycloak.enforcer(permissions)(req, res, (_next: any) => {
         if (req.resourceDenied) {
           resolve(false);
         } else {
           resolve(true);
         }
-      })
-    );
+      });
+    });
   };
 }

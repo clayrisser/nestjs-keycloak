@@ -19,7 +19,8 @@ export class KeycloakService {
     scope,
     username
   }: LoginArgs): Promise<Auth> {
-    if (!scope) scope = 'openid profile ';
+    if (Array.isArray(scope)) scope = scope.join(' ');
+    if (!scope?.length) scope = 'openid profile';
     try {
       let data: string;
       if (refreshToken?.length) {
@@ -78,7 +79,7 @@ export class KeycloakService {
 export interface LoginArgs {
   username?: string;
   password?: string;
-  scope?: string;
+  scope?: string | string[];
   refreshToken?: string;
 }
 
