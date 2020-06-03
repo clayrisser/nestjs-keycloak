@@ -7,6 +7,7 @@ import {
   KeycloakConnectModuleAsyncOptions
 } from './types';
 
+export * from './authenticate';
 export * from './decorators/publicPath.decorator';
 export * from './decorators/resource.decorator';
 export * from './decorators/roles.decorator';
