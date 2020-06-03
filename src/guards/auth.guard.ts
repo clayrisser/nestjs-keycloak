@@ -9,9 +9,10 @@ import {
   Injectable,
   Logger
 } from '@nestjs/common';
-import { KEYCLOAK_INSTANCE } from '../constants';
-import { KeycloakService } from '../keycloak.service';
-import { KeycloakedRequest, UserInfo } from '../types';
+import authenticate from '../authenticate';
+import getReq from '../getReq';
+import { KEYCLOAK_INSTANCE, KEYCLOAK_CONNECT_OPTIONS } from '../constants';
+import { KeycloakConnectOptions, KeycloakedRequest, UserInfo } from '../types';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -20,8 +21,8 @@ export class AuthGuard implements CanActivate {
   constructor(
     @Inject(KEYCLOAK_INSTANCE)
     private readonly keycloak: Keycloak,
-    private readonly reflector: Reflector,
-    @Inject('KeycloakService') private readonly keycloakService: KeycloakService
+    @Inject(KEYCLOAK_CONNECT_OPTIONS) private options: KeycloakConnectOptions,
+    private readonly reflector: Reflector
   ) {}
 
   async getGrant(
@@ -31,7 +32,7 @@ export class AuthGuard implements CanActivate {
     const accessGrant = !!accessToken?.length;
     if (!accessToken && req.session?.refreshToken?.length) {
       try {
-        const result = await this.keycloakService.authenticate({
+        const result = await authenticate(req, this.options, {
           refreshToken: req.session.refreshToken
         });
         accessToken = result.accessToken;
@@ -65,7 +66,7 @@ export class AuthGuard implements CanActivate {
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const req: KeycloakedRequest<Request> = context.switchToHttp().getRequest();
+    const req = getReq(context);
     const isPublic = !!this.reflector.get<string>(
       'public-path',
       context.getHandler()

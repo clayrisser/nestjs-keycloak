@@ -40,7 +40,7 @@ export class KeycloakConnectModule {
         },
         this.keycloakProvider
       ],
-      exports: [this.keycloakProvider]
+      exports: [this.keycloakProvider, KEYCLOAK_CONNECT_OPTIONS]
     };
   }
 
@@ -54,7 +54,7 @@ export class KeycloakConnectModule {
         this.createConnectProviders(options) as any,
         this.keycloakProvider
       ],
-      exports: [this.keycloakProvider]
+      exports: [this.keycloakProvider, KEYCLOAK_CONNECT_OPTIONS]
     };
   }
 
