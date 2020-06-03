@@ -39,17 +39,17 @@ export class ResourceGuard implements CanActivate {
     );
     if (!scopes.length) return true;
     const req = getReq(context);
-    if (!req.user) return false;
+    if (!req.userInfo) return false;
     const permissions = scopes.map((scope) => `${resource}:${scope}`);
     const res: Response = context.switchToHttp().getResponse();
-    const user = req.user?.preferred_username;
+    const username = req.userInfo?.preferred_username;
     const enforcerFn = createEnforcerContext(req, res);
     const isAllowed = await enforcerFn(this.keycloak, permissions);
     if (!isAllowed) {
-      this.logger.verbose(`Resource '${resource}' denied to '${user}'.`);
+      this.logger.verbose(`Resource '${resource}' denied to '${username}'.`);
       return false;
     }
-    this.logger.verbose(`Resource '${resource}' granted to '${user}'.`);
+    this.logger.verbose(`Resource '${resource}' granted to '${username}'.`);
     return true;
   }
 }

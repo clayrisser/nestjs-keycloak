@@ -4,19 +4,19 @@ import { Provider } from '@nestjs/common';
 import { Request } from 'express';
 
 export interface UserInfo {
-  email_verified: boolean;
-  preferred_username: string;
+  emailVerified: boolean;
+  preferredUsername: string;
   sub: string;
   [key: string]: any;
 }
 
 export type KeycloakedRequest<T = Request> = {
   grant?: Grant;
-  user?: UserInfo;
+  userInfo?: UserInfo;
   session?: {
     refreshToken?: string;
     token?: string;
-    user?: UserInfo;
+    userInfo?: UserInfo;
     [key: string]: any;
   };
 } & T;

@@ -49,14 +49,10 @@ export class AuthGuard implements CanActivate {
       if (grant.isExpired()) return false;
       req.grant = grant;
       if (req.session?.user) {
-        req.user = req.session.user;
+        req.userInfo = req.session.userInfo;
       } else {
-        req.user =
-          grant.access_token &&
-          (await this.keycloak.grantManager.userInfo<Token | string, UserInfo>(
-            grant.access_token
-          ));
-        if (req.session) req.session.user = req.user;
+        req.userInfo = await this.getUserInfo(req.grant);
+        if (req.session) req.session.userInfo = req.userInfo;
       }
       if (roles && req.grant) {
         return roles.some((role) => {
@@ -70,6 +66,30 @@ export class AuthGuard implements CanActivate {
       return true;
     }
     return false;
+  }
+
+  async getUserInfo(grant: Grant): Promise<UserInfo> {
+    const userinfo =
+      grant.access_token &&
+      (await this.keycloak.grantManager.userInfo<
+        Token | string,
+        {
+          email_verified: boolean;
+          preferred_username: string;
+          sub: string;
+          [key: string]: any;
+        }
+      >(grant.access_token));
+    const userInfo = {
+      ...{
+        emailVerified: userinfo?.email_verified,
+        preferredUsername: userinfo?.preferred_username
+      },
+      ...userinfo
+    } as UserInfo;
+    delete userInfo?.email_verified;
+    delete userInfo?.preferred_username;
+    return userInfo;
   }
 
   async getGrant(

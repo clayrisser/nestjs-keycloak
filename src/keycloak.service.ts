@@ -30,8 +30,8 @@ export class KeycloakService {
     return authenticate(this.req, this.options, this.api, loginArgs);
   }
 
-  get user(): UserInfo | undefined {
-    return this.req.user;
+  get userinfo(): UserInfo | undefined {
+    return this.req.userInfo;
   }
 
   get grant(): Grant | undefined {
