@@ -1,6 +1,5 @@
 import { AxiosStatic } from 'axios';
 import { Grant, Keycloak, Token } from 'keycloak-connect';
-import { IncomingHttpHeaders } from 'http';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import {
@@ -11,10 +10,10 @@ import {
   Logger
 } from '@nestjs/common';
 import authenticate from '../authenticate';
-import getReq from '../getReq';
 import { AXIOS } from '../providers/axios.provider';
 import { KEYCLOAK_INSTANCE, KEYCLOAK_CONNECT_OPTIONS } from '../constants';
 import { KeycloakConnectOptions, KeycloakedRequest, UserInfo } from '../types';
+import { getReq, extractJwt } from '../utils';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -39,7 +38,7 @@ export class AuthGuard implements CanActivate {
       'roles',
       context.getHandler()
     );
-    const accessToken = this.extractJwt(req.headers) || req.session?.token;
+    const accessToken = extractJwt(req.headers) || req.session?.token;
     let grant: Grant | null = null;
     if (accessToken?.length) {
       grant = await this.getGrant(req, accessToken);
@@ -115,14 +114,5 @@ export class AuthGuard implements CanActivate {
       }
       return this.getGrant(req);
     }
-  }
-
-  extractJwt(headers: IncomingHttpHeaders) {
-    const { authorization } = headers;
-    if (typeof authorization === 'undefined') return null;
-    if (authorization?.indexOf(' ') <= -1) return authorization;
-    const auth = authorization?.split(' ');
-    if (auth && auth[0] && auth[0].toLowerCase() === 'bearer') return auth[1];
-    return null;
   }
 }

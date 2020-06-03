@@ -32,8 +32,7 @@ export default async function authenticate(
     }
     const res = await api.post<LoginResponseData>(
       `/realms/${options.realm}/protocol/openid-connect/token`,
-      data,
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+      data
     );
     if (req.session) {
       if (res.data.access_token?.length) {

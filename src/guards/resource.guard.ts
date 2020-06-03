@@ -8,8 +8,8 @@ import {
   Injectable,
   Logger
 } from '@nestjs/common';
-import getReq from '../getReq';
 import { KEYCLOAK_INSTANCE } from '../constants';
+import { getReq } from '../utils';
 
 declare module 'keycloak-connect' {
   interface Keycloak {

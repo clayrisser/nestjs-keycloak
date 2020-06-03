@@ -7,6 +7,7 @@ export interface UserInfo {
   email_verified: boolean;
   preferred_username: string;
   sub: string;
+  [key: string]: any;
 }
 
 export type KeycloakedRequest<T = Request> = {
