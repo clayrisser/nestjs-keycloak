@@ -1,5 +1,6 @@
 import KeycloakConnect from 'keycloak-connect';
-import { DynamicModule, Global, Module, Provider } from '@nestjs/common';
+import { DynamicModule, Module, Provider } from '@nestjs/common';
+import { AxiosProvider } from './providers/axios.provider';
 import { KEYCLOAK_CONNECT_OPTIONS, KEYCLOAK_INSTANCE } from './constants';
 import { KeycloakService } from './keycloak.service';
 import {
@@ -8,7 +9,8 @@ import {
 } from './types';
 
 export * from './authenticate';
-export * from './decorators/publicPath.decorator';
+export * from './constants';
+export * from './decorators/public.decorator';
 export * from './decorators/resource.decorator';
 export * from './decorators/roles.decorator';
 export * from './decorators/scopes.decorator';
@@ -25,23 +27,26 @@ declare interface KeycloakConnectOptions {
   secret?: string;
 }
 
-@Global()
-@Module({
-  providers: [KeycloakService],
-  exports: [KeycloakService]
-})
+@Module({})
 export class KeycloakConnectModule {
   public static register(options: KeycloakConnectOptions): DynamicModule {
     return {
       module: KeycloakConnectModule,
       providers: [
+        AxiosProvider,
+        KeycloakService,
+        this.keycloakProvider,
         {
           provide: KEYCLOAK_CONNECT_OPTIONS,
           useValue: options
-        },
-        this.keycloakProvider
+        }
       ],
-      exports: [this.keycloakProvider, KEYCLOAK_CONNECT_OPTIONS]
+      exports: [
+        AxiosProvider,
+        KEYCLOAK_CONNECT_OPTIONS,
+        KeycloakService,
+        this.keycloakProvider
+      ]
     };
   }
 
@@ -52,10 +57,17 @@ export class KeycloakConnectModule {
       module: KeycloakConnectModule,
       imports: options.imports || [],
       providers: [
+        KeycloakService,
+        options.axiosProvider || AxiosProvider,
         this.createConnectProviders(options) as any,
         this.keycloakProvider
       ],
-      exports: [this.keycloakProvider, KEYCLOAK_CONNECT_OPTIONS]
+      exports: [
+        KEYCLOAK_CONNECT_OPTIONS,
+        KeycloakService,
+        options.axiosProvider || AxiosProvider,
+        this.keycloakProvider
+      ]
     };
   }
 

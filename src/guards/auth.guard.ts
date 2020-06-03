@@ -1,3 +1,4 @@
+import { AxiosStatic } from 'axios';
 import { Grant, Keycloak, Token } from 'keycloak-connect';
 import { IncomingHttpHeaders } from 'http';
 import { Reflector } from '@nestjs/core';
@@ -11,6 +12,7 @@ import {
 } from '@nestjs/common';
 import authenticate from '../authenticate';
 import getReq from '../getReq';
+import { AXIOS } from '../providers/axios.provider';
 import { KEYCLOAK_INSTANCE, KEYCLOAK_CONNECT_OPTIONS } from '../constants';
 import { KeycloakConnectOptions, KeycloakedRequest, UserInfo } from '../types';
 
@@ -22,53 +24,14 @@ export class AuthGuard implements CanActivate {
     @Inject(KEYCLOAK_INSTANCE)
     private readonly keycloak: Keycloak,
     @Inject(KEYCLOAK_CONNECT_OPTIONS) private options: KeycloakConnectOptions,
-    private readonly reflector: Reflector
+    private readonly reflector: Reflector,
+    @Inject(AXIOS) private readonly axios: AxiosStatic
   ) {}
-
-  async getGrant(
-    req: KeycloakedRequest<Request>,
-    accessToken?: string
-  ): Promise<Grant | null> {
-    const accessGrant = !!accessToken?.length;
-    if (!accessToken && req.session?.refreshToken?.length) {
-      try {
-        const result = await authenticate(req, this.options, {
-          refreshToken: req.session.refreshToken
-        });
-        accessToken = result.accessToken;
-        req.session.token = result.accessToken;
-        req.session.refreshToken = result.refreshToken;
-      } catch (err) {
-        this.logger.error(err.statusCode, JSON.stringify(err.payload));
-        if (err.statusCode < 500) return null;
-        if (err.payload && err.statusCode) {
-          this.logger.error(err.statusCode, JSON.stringify(err.payload));
-        }
-        throw err;
-      }
-    }
-    if (!accessToken) return null;
-    try {
-      const grant = await this.keycloak.grantManager.createGrant({
-        access_token: accessToken as any
-      });
-      if (accessGrant && grant.isExpired()) return this.getGrant(req);
-      return grant;
-    } catch (err) {
-      if (
-        err.message !==
-        'Grant validation failed. Reason: invalid token (expired)'
-      ) {
-        throw err;
-      }
-      return this.getGrant(req);
-    }
-  }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = getReq(context);
     const isPublic = !!this.reflector.get<string>(
-      'public-path',
+      'public',
       context.getHandler()
     );
     if (isPublic) return true;
@@ -108,6 +71,50 @@ export class AuthGuard implements CanActivate {
       return true;
     }
     return false;
+  }
+
+  async getGrant(
+    req: KeycloakedRequest<Request>,
+    accessToken?: string
+  ): Promise<Grant | null> {
+    const accessGrant = !!accessToken?.length;
+    if (!accessToken && req.session?.refreshToken?.length) {
+      try {
+        const api = this.axios.create({
+          baseURL: this.options.authServerUrl,
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await authenticate(req, this.options, api, {
+          refreshToken: req.session.refreshToken
+        });
+        accessToken = result.accessToken;
+        req.session.token = result.accessToken;
+        req.session.refreshToken = result.refreshToken;
+      } catch (err) {
+        this.logger.error(err.statusCode, JSON.stringify(err.payload));
+        if (err.statusCode < 500) return null;
+        if (err.payload && err.statusCode) {
+          this.logger.error(err.statusCode, JSON.stringify(err.payload));
+        }
+        throw err;
+      }
+    }
+    if (!accessToken) return null;
+    try {
+      const grant = await this.keycloak.grantManager.createGrant({
+        access_token: accessToken as any
+      });
+      if (accessGrant && grant.isExpired()) return this.getGrant(req);
+      return grant;
+    } catch (err) {
+      if (
+        err.message !==
+        'Grant validation failed. Reason: invalid token (expired)'
+      ) {
+        throw err;
+      }
+      return this.getGrant(req);
+    }
   }
 
   extractJwt(headers: IncomingHttpHeaders) {

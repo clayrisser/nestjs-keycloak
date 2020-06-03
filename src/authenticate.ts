@@ -1,11 +1,12 @@
-import axios from 'axios';
 import qs from 'qs';
+import { AxiosInstance } from 'axios';
 import { Request } from 'express';
 import { KeycloakedRequest, KeycloakConnectOptions } from './types';
 
 export default async function authenticate(
   req: KeycloakedRequest<Request>,
   options: KeycloakConnectOptions,
+  api: AxiosInstance,
   { password, refreshToken, scope, username }: LoginArgs
 ): Promise<Auth> {
   if (Array.isArray(scope)) scope = scope.join(' ');
@@ -29,9 +30,10 @@ export default async function authenticate(
         username
       });
     }
-    const res = await axios.post<LoginResponseData>(
-      `${options.authServerUrl}/realms/${options.realm}/protocol/openid-connect/token`,
-      data
+    const res = await api.post<LoginResponseData>(
+      `/realms/${options.realm}/protocol/openid-connect/token`,
+      data,
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     );
     if (req.session) {
       if (res.data.access_token?.length) {
