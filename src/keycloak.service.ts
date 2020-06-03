@@ -30,7 +30,19 @@ export class KeycloakService {
     return authenticate(this.req, this.options, this.api, loginArgs);
   }
 
-  get userinfo(): UserInfo | undefined {
+  async logout(): Promise<null> {
+    if (!this.req.session) return null;
+    await new Promise((resolve, reject) => {
+      if (!this.req.session?.destroy) return resolve();
+      this.req.session?.destroy((err: Error) => {
+        if (err) return reject(err);
+        return resolve();
+      });
+    });
+    return null;
+  }
+
+  get userInfo(): UserInfo | undefined {
     return this.req.userInfo;
   }
 
