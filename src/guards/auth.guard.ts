@@ -101,7 +101,7 @@ export class AuthGuard implements CanActivate {
       try {
         const api = this.axios.create({
           baseURL: this.options.authServerUrl,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         });
         const result = await authenticate(req, this.options, api, {
           refreshToken: req.session.refreshToken
