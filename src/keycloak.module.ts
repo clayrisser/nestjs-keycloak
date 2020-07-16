@@ -1,12 +1,9 @@
-import KeycloakConnect from 'keycloak-connect';
+import Keycloak from 'keycloak-connect';
 import { DynamicModule, Module, Provider } from '@nestjs/common';
 import { AxiosProvider } from './providers/axios.provider';
-import { KEYCLOAK_CONNECT_OPTIONS, KEYCLOAK_INSTANCE } from './constants';
+import { KEYCLOAK_OPTIONS, KEYCLOAK_INSTANCE } from './constants';
 import { KeycloakService } from './keycloak.service';
-import {
-  KeycloakConnectOptionsFactory,
-  KeycloakConnectModuleAsyncOptions
-} from './types';
+import { KeycloakOptionsFactory, KeycloakModuleAsyncOptions } from './types';
 
 export * from './authenticate';
 export * from './constants';
@@ -19,7 +16,7 @@ export * from './guards/resource.guard';
 export * from './keycloak.service';
 export * from './types';
 
-declare interface KeycloakConnectOptions {
+declare interface KeycloakOptions {
   authServerUrl: string;
   clientId?: string;
   realm?: string;
@@ -28,22 +25,22 @@ declare interface KeycloakConnectOptions {
 }
 
 @Module({})
-export class KeycloakConnectModule {
-  public static register(options: KeycloakConnectOptions): DynamicModule {
+export class KeycloakModule {
+  public static register(options: KeycloakOptions): DynamicModule {
     return {
-      module: KeycloakConnectModule,
+      module: KeycloakModule,
       providers: [
         AxiosProvider,
         KeycloakService,
         this.keycloakProvider,
         {
-          provide: KEYCLOAK_CONNECT_OPTIONS,
+          provide: KEYCLOAK_OPTIONS,
           useValue: options
         }
       ],
       exports: [
         AxiosProvider,
-        KEYCLOAK_CONNECT_OPTIONS,
+        KEYCLOAK_OPTIONS,
         KeycloakService,
         this.keycloakProvider
       ]
@@ -51,19 +48,19 @@ export class KeycloakConnectModule {
   }
 
   public static registerAsync(
-    options: KeycloakConnectModuleAsyncOptions
+    options: KeycloakModuleAsyncOptions
   ): DynamicModule {
     return {
-      module: KeycloakConnectModule,
+      module: KeycloakModule,
       imports: options.imports || [],
       providers: [
         KeycloakService,
         options.axiosProvider || AxiosProvider,
-        this.createConnectProviders(options) as any,
+        this.createProviders(options) as any,
         this.keycloakProvider
       ],
       exports: [
-        KEYCLOAK_CONNECT_OPTIONS,
+        KEYCLOAK_OPTIONS,
         KeycloakService,
         options.axiosProvider || AxiosProvider,
         this.keycloakProvider
@@ -71,11 +68,9 @@ export class KeycloakConnectModule {
     };
   }
 
-  private static createConnectProviders(
-    options: KeycloakConnectModuleAsyncOptions
-  ) {
+  private static createProviders(options: KeycloakModuleAsyncOptions) {
     if (options.useExisting || options.useFactory) {
-      return this.createConnectOptionsProvider(options);
+      return this.createOptionsProvider(options);
     }
     if (!options.useClass) {
       return {
@@ -88,34 +83,34 @@ export class KeycloakConnectModule {
     );
   }
 
-  private static createConnectOptionsProvider(
-    options: KeycloakConnectModuleAsyncOptions
+  private static createOptionsProvider(
+    options: KeycloakModuleAsyncOptions
   ): Provider {
     if (options.useFactory) {
       return {
         inject: options.inject || [],
-        provide: KEYCLOAK_CONNECT_OPTIONS,
+        provide: KEYCLOAK_OPTIONS,
         useFactory: options.useFactory
       };
     }
     return {
-      provide: KEYCLOAK_CONNECT_OPTIONS,
-      useFactory: async (optionsFactory: KeycloakConnectOptionsFactory) =>
-        await optionsFactory.createKeycloakConnectOptions(),
+      provide: KEYCLOAK_OPTIONS,
+      useFactory: async (optionsFactory: KeycloakOptionsFactory) =>
+        await optionsFactory.createKeycloakOptions(),
       inject: [options.useExisting || (options.useClass as any)]
     };
   }
 
   private static keycloakProvider: Provider = {
     provide: KEYCLOAK_INSTANCE,
-    useFactory: (options: KeycloakConnectOptions) => {
-      const keycloak: any = new KeycloakConnect({}, options as any);
+    useFactory: (options: KeycloakOptions) => {
+      const keycloak: any = new Keycloak({}, options as any);
       keycloak.accessDenied = (req: any, _res: any, next: any) => {
         req.resourceDenied = true;
         next();
       };
       return keycloak;
     },
-    inject: [KEYCLOAK_CONNECT_OPTIONS]
+    inject: [KEYCLOAK_OPTIONS]
   };
 }

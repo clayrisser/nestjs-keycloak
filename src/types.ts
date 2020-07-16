@@ -21,26 +21,22 @@ export type KeycloakedRequest<T = Request> = {
   };
 } & T;
 
-export interface KeycloakConnectModuleAsyncOptions
+export interface KeycloakModuleAsyncOptions
   extends Pick<ModuleMetadata, 'imports'> {
   axiosProvider?: Provider;
   inject?: any[];
-  useClass?: Type<KeycloakConnectOptionsFactory>;
-  useExisting?: Type<KeycloakConnectOptionsFactory>;
-  useFactory?: (
-    ...args: any[]
-  ) => Promise<KeycloakConnectOptions> | KeycloakConnectOptions;
+  useClass?: Type<KeycloakOptionsFactory>;
+  useExisting?: Type<KeycloakOptionsFactory>;
+  useFactory?: (...args: any[]) => Promise<KeycloakOptions> | KeycloakOptions;
 }
 
-export interface KeycloakConnectOptions {
+export interface KeycloakOptions {
   authServerUrl: string;
   clientId: string;
   realm: string;
   secret: string;
 }
 
-export interface KeycloakConnectOptionsFactory {
-  createKeycloakConnectOptions():
-    | KeycloakConnectOptions
-    | Promise<KeycloakConnectOptions>;
+export interface KeycloakOptionsFactory {
+  createKeycloakOptions(): KeycloakOptions | Promise<KeycloakOptions>;
 }

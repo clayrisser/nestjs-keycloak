@@ -1,11 +1,11 @@
 import qs from 'qs';
 import { AxiosInstance } from 'axios';
 import { Request } from 'express';
-import { KeycloakedRequest, KeycloakConnectOptions } from './types';
+import { KeycloakedRequest, KeycloakOptions } from './types';
 
 export default async function authenticate(
   req: KeycloakedRequest<Request>,
-  options: KeycloakConnectOptions,
+  options: KeycloakOptions,
   api: AxiosInstance,
   { password, refreshToken, scope, username }: LoginArgs
 ): Promise<Auth> {

@@ -6,8 +6,8 @@ import { REQUEST } from '@nestjs/core';
 import { Request } from 'express';
 import authenticate, { LoginArgs, Auth } from './authenticate';
 import { AXIOS } from './providers/axios.provider';
-import { KEYCLOAK_CONNECT_OPTIONS, KEYCLOAK_INSTANCE } from './constants';
-import { KeycloakedRequest, KeycloakConnectOptions, UserInfo } from './types';
+import { KEYCLOAK_OPTIONS, KEYCLOAK_INSTANCE } from './constants';
+import { KeycloakedRequest, KeycloakOptions, UserInfo } from './types';
 
 @Injectable({ scope: Scope.REQUEST })
 export class KeycloakService {
@@ -15,8 +15,8 @@ export class KeycloakService {
 
   constructor(
     @Inject(KEYCLOAK_INSTANCE) _keycloak: Keycloak,
-    @Inject(KEYCLOAK_CONNECT_OPTIONS)
-    private readonly options: KeycloakConnectOptions,
+    @Inject(KEYCLOAK_OPTIONS)
+    private readonly options: KeycloakOptions,
     @Inject(REQUEST) private readonly req: KeycloakedRequest<Request>,
     @Inject(AXIOS) axios: AxiosStatic
   ) {
