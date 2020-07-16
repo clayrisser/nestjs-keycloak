@@ -1,9 +1,12 @@
 import Keycloak from 'keycloak-connect';
 import { DynamicModule, Module, Provider } from '@nestjs/common';
-import { AxiosProvider } from './providers/axios.provider';
+import {
+  KeycloakAxiosProvider,
+  KEYCLOAK_AXIOS
+} from './providers/axios.provider';
 import { KEYCLOAK_OPTIONS, KEYCLOAK_INSTANCE } from './constants';
+import { KeycloakAsyncOptions } from './types';
 import { KeycloakService } from './keycloak.service';
-import { KeycloakOptionsFactory, KeycloakModuleAsyncOptions } from './types';
 
 export * from './authenticate';
 export * from './constants';
@@ -30,7 +33,7 @@ export class KeycloakModule {
     return {
       module: KeycloakModule,
       providers: [
-        AxiosProvider,
+        KeycloakAxiosProvider,
         KeycloakService,
         this.keycloakProvider,
         {
@@ -39,65 +42,43 @@ export class KeycloakModule {
         }
       ],
       exports: [
-        AxiosProvider,
         KEYCLOAK_OPTIONS,
         KeycloakService,
-        this.keycloakProvider
+        this.keycloakProvider,
+        KEYCLOAK_AXIOS
       ]
     };
   }
 
   public static registerAsync(
-    options: KeycloakModuleAsyncOptions
+    asyncOptions: KeycloakAsyncOptions
   ): DynamicModule {
     return {
       module: KeycloakModule,
-      imports: options.imports || [],
+      imports: asyncOptions.imports || [],
       providers: [
+        KeycloakAxiosProvider,
         KeycloakService,
-        options.axiosProvider || AxiosProvider,
-        this.createProviders(options) as any,
+        this.createOptionsProviders(asyncOptions),
         this.keycloakProvider
       ],
       exports: [
         KEYCLOAK_OPTIONS,
         KeycloakService,
-        options.axiosProvider || AxiosProvider,
-        this.keycloakProvider
+        this.keycloakProvider,
+        KEYCLOAK_AXIOS
       ]
     };
   }
 
-  private static createProviders(options: KeycloakModuleAsyncOptions) {
-    if (options.useExisting || options.useFactory) {
-      return this.createOptionsProvider(options);
-    }
-    if (!options.useClass) {
-      return {
-        provide: options.useClass,
-        useClass: options.useClass
-      };
-    }
-    throw new Error(
-      "registerAsync must have 'useExisting', 'useFactory', or 'useClass'"
-    );
-  }
-
-  private static createOptionsProvider(
-    options: KeycloakModuleAsyncOptions
-  ): Provider {
-    if (options.useFactory) {
-      return {
-        inject: options.inject || [],
-        provide: KEYCLOAK_OPTIONS,
-        useFactory: options.useFactory
-      };
+  private static createOptionsProviders(asyncOptions: KeycloakAsyncOptions) {
+    if (!asyncOptions.useFactory) {
+      throw new Error("registerAsync must have 'useFactory'");
     }
     return {
+      inject: asyncOptions.inject || [],
       provide: KEYCLOAK_OPTIONS,
-      useFactory: async (optionsFactory: KeycloakOptionsFactory) =>
-        await optionsFactory.createKeycloakOptions(),
-      inject: [options.useExisting || (options.useClass as any)]
+      useFactory: asyncOptions.useFactory
     };
   }
 

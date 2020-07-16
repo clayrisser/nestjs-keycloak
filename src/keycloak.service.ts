@@ -1,11 +1,10 @@
 import { AxiosStatic, AxiosInstance } from 'axios';
 import { Grant, Keycloak } from 'keycloak-connect';
 import { Injectable, Inject, Scope } from '@nestjs/common';
-
 import { REQUEST } from '@nestjs/core';
 import { Request } from 'express';
 import authenticate, { LoginArgs, Auth } from './authenticate';
-import { AXIOS } from './providers/axios.provider';
+import { KEYCLOAK_AXIOS } from './providers/axios.provider';
 import { KEYCLOAK_OPTIONS, KEYCLOAK_INSTANCE } from './constants';
 import { KeycloakedRequest, KeycloakOptions, UserInfo } from './types';
 
@@ -18,7 +17,7 @@ export class KeycloakService {
     @Inject(KEYCLOAK_OPTIONS)
     private readonly options: KeycloakOptions,
     @Inject(REQUEST) private readonly req: KeycloakedRequest<Request>,
-    @Inject(AXIOS) axios: AxiosStatic
+    @Inject(KEYCLOAK_AXIOS) axios: AxiosStatic
   ) {
     this.api = axios.create({
       baseURL: options.authServerUrl,

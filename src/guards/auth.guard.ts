@@ -10,7 +10,7 @@ import {
   Logger
 } from '@nestjs/common';
 import authenticate from '../authenticate';
-import { AXIOS } from '../providers/axios.provider';
+import { KEYCLOAK_AXIOS } from '../providers/axios.provider';
 import { KEYCLOAK_INSTANCE, KEYCLOAK_OPTIONS } from '../constants';
 import { KeycloakOptions, KeycloakedRequest, UserInfo } from '../types';
 import { getReq, extractJwt } from '../utils';
@@ -24,7 +24,7 @@ export class AuthGuard implements CanActivate {
     private readonly keycloak: Keycloak,
     @Inject(KEYCLOAK_OPTIONS) private options: KeycloakOptions,
     private readonly reflector: Reflector,
-    @Inject(AXIOS) private readonly axios: AxiosStatic
+    @Inject(KEYCLOAK_AXIOS) private readonly axios: AxiosStatic
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {

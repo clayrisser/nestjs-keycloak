@@ -1,6 +1,6 @@
 {
   "name": "nestjs-keycloak",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "nestjs keycloak module",
   "keywords": [
     "nestjs-keycloak"
@@ -46,9 +46,12 @@
   },
   "dependencies": {
     "axios": "^0.19.2",
+    "axios-logger": "^2.3.1",
     "core-js": "^3.6.5",
+    "express-serve-static-core": "^0.1.1",
     "keycloak-connect": "^10.0.1",
-    "qs": "^6.9.4"
+    "qs": "^6.9.4",
+    "rxjs": "^6.6.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.10.1",
@@ -63,6 +66,7 @@
     "@nestjs/core": "^7.1.1",
     "@nestjs/graphql": "^7.4.1",
     "@types/express": "^4.17.6",
+    "@types/express-serve-static-core": "^4.17.8",
     "@types/jest": "^25.2.3",
     "@types/qs": "^6.9.3",
     "@typescript-eslint/eslint-plugin": "^3.0.2",
