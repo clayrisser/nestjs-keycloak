@@ -1,4 +1,5 @@
 import Keycloak from 'keycloak-connect';
+import KcAdminClient from 'keycloak-admin';
 import { DynamicModule, Module, Provider } from '@nestjs/common';
 import {
   KeycloakAxiosProvider,
@@ -30,6 +31,7 @@ declare interface KeycloakOptions {
 @Module({})
 export class KeycloakModule {
   public static register(options: KeycloakOptions): DynamicModule {
+    KeycloakModule.setupKeycloak(options);
     return {
       module: KeycloakModule,
       providers: [
@@ -53,6 +55,7 @@ export class KeycloakModule {
   public static registerAsync(
     asyncOptions: KeycloakAsyncOptions
   ): DynamicModule {
+    KeycloakModule.setupKeycloak({});
     return {
       module: KeycloakModule,
       imports: asyncOptions.imports || [],
@@ -94,4 +97,31 @@ export class KeycloakModule {
     },
     inject: [KEYCLOAK_OPTIONS]
   };
+
+  public static async setupKeycloak(options: KeycloakOptions) {
+    console.log(options);
+    console.log('call keycloak endpoint APIs');
+    /*
+    resources  {
+      exampleResourceName: [scope1, scope2],
+    }
+    */
+    const roles = ['admin', 'user'];
+    const kcAdminClient = new KcAdminClient();
+    kcAdminClient.auth({
+      username: 'admin ',
+      password: 'pass',
+      grantType: 'password',
+      clientId: 'admin-cli'
+    });
+    kcAdminClient.setConfig({
+      realmName: 'Nestjs-keycloak-example'
+    });
+    roles.forEach(async (role) => {
+      const createdRole = await kcAdminClient.roles.create({
+        name: role
+      });
+      console.log(createdRole);
+    });
+  }
 }

@@ -48,7 +48,7 @@ export class AuthGuard implements CanActivate {
     if (grant) {
       if (grant.isExpired()) return false;
       req.grant = grant;
-      if (req.session?.user) {
+      if (req.session?.userInfo) {
         req.userInfo = req.session.userInfo;
       } else {
         req.userInfo = await this.getUserInfo(req.grant);
