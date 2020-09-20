@@ -1,12 +1,12 @@
 import qs from 'qs';
-import { AxiosInstance } from 'axios';
+import { HttpService } from '@nestjs/common';
 import { Request } from 'express';
 import { KeycloakedRequest, KeycloakOptions } from './types';
 
 export default async function authenticate(
   req: KeycloakedRequest<Request>,
   options: KeycloakOptions,
-  api: AxiosInstance,
+  httpService: HttpService,
   { password, refreshToken, scope, username }: LoginArgs
 ): Promise<Auth> {
   if (Array.isArray(scope)) scope = scope.join(' ');
@@ -30,10 +30,12 @@ export default async function authenticate(
         username
       });
     }
-    const res = await api.post<LoginResponseData>(
-      `/realms/${options.realm}/protocol/openid-connect/token`,
-      data
-    );
+    const res = await httpService
+      .post<LoginResponseData>(
+        `/realms/${options.realm}/protocol/openid-connect/token`,
+        data
+      )
+      .toPromise();
     if (req.session) {
       if (res.data.access_token?.length) {
         req.session.token = res.data.access_token;

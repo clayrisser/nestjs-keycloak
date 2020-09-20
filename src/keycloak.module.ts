@@ -1,9 +1,5 @@
 import Keycloak from 'keycloak-connect';
-import { DynamicModule, Module, Provider } from '@nestjs/common';
-import {
-  KeycloakAxiosProvider,
-  KEYCLOAK_AXIOS
-} from './providers/axios.provider';
+import { DynamicModule, Module, Provider, HttpModule } from '@nestjs/common';
 import { KEYCLOAK_OPTIONS, KEYCLOAK_INSTANCE } from './constants';
 import { KeycloakAsyncOptions } from './types';
 import { KeycloakService } from './keycloak.service';
@@ -32,8 +28,16 @@ export class KeycloakModule {
   public static register(options: KeycloakOptions): DynamicModule {
     return {
       module: KeycloakModule,
+      imports: [
+        HttpModule.registerAsync({
+          useFactory: (options: KeycloakOptions) => ({
+            baseURL: options.authServerUrl,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+          }),
+          inject: [KEYCLOAK_OPTIONS]
+        })
+      ],
       providers: [
-        KeycloakAxiosProvider,
         KeycloakService,
         this.keycloakProvider,
         {
@@ -41,12 +45,7 @@ export class KeycloakModule {
           useValue: options
         }
       ],
-      exports: [
-        KEYCLOAK_OPTIONS,
-        KeycloakService,
-        this.keycloakProvider,
-        KEYCLOAK_AXIOS
-      ]
+      exports: [KEYCLOAK_OPTIONS, KeycloakService, this.keycloakProvider]
     };
   }
 
@@ -55,19 +54,22 @@ export class KeycloakModule {
   ): DynamicModule {
     return {
       module: KeycloakModule,
-      imports: asyncOptions.imports || [],
+      imports: [
+        ...(asyncOptions.imports || []),
+        HttpModule.registerAsync({
+          useFactory: (options: KeycloakOptions) => ({
+            baseURL: options.authServerUrl,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+          }),
+          inject: [KEYCLOAK_OPTIONS]
+        })
+      ],
       providers: [
-        KeycloakAxiosProvider,
         KeycloakService,
         this.createOptionsProviders(asyncOptions),
         this.keycloakProvider
       ],
-      exports: [
-        KEYCLOAK_OPTIONS,
-        KeycloakService,
-        this.keycloakProvider,
-        KEYCLOAK_AXIOS
-      ]
+      exports: [KEYCLOAK_OPTIONS, KeycloakService, this.keycloakProvider]
     };
   }
 

@@ -1,32 +1,23 @@
-import { AxiosStatic, AxiosInstance } from 'axios';
 import { Grant, Keycloak } from 'keycloak-connect';
-import { Injectable, Inject, Scope } from '@nestjs/common';
+import { Injectable, Inject, Scope, HttpService } from '@nestjs/common';
 import { REQUEST } from '@nestjs/core';
 import { Request } from 'express';
 import authenticate, { LoginArgs, Auth } from './authenticate';
-import { KEYCLOAK_AXIOS } from './providers/axios.provider';
 import { KEYCLOAK_OPTIONS, KEYCLOAK_INSTANCE } from './constants';
 import { KeycloakedRequest, KeycloakOptions, UserInfo } from './types';
 
 @Injectable({ scope: Scope.REQUEST })
 export class KeycloakService {
-  api: AxiosInstance;
-
   constructor(
     @Inject(KEYCLOAK_INSTANCE) _keycloak: Keycloak,
     @Inject(KEYCLOAK_OPTIONS)
     private readonly options: KeycloakOptions,
     @Inject(REQUEST) private readonly req: KeycloakedRequest<Request>,
-    @Inject(KEYCLOAK_AXIOS) axios: AxiosStatic
-  ) {
-    this.api = axios.create({
-      baseURL: options.authServerUrl,
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-    });
-  }
+    private readonly httpService: HttpService
+  ) {}
 
   async authenticate(loginArgs: LoginArgs): Promise<Auth> {
-    return authenticate(this.req, this.options, this.api, loginArgs);
+    return authenticate(this.req, this.options, this.httpService, loginArgs);
   }
 
   async logout(): Promise<null> {
