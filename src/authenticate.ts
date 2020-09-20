@@ -33,7 +33,11 @@ export default async function authenticate(
     const res = await httpService
       .post<LoginResponseData>(
         `/realms/${options.realm}/protocol/openid-connect/token`,
-        data
+        data,
+        {
+          baseURL: options.authServerUrl,
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        }
       )
       .toPromise();
     if (req.session) {

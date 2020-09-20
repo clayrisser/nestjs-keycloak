@@ -54,6 +54,7 @@
     "connect-redis": "^5.0.0",
     "core-js": "^3.6.5",
     "dotenv": "^8.2.0",
+    "ejs": "^3.1.5",
     "express-serve-static-core": "^0.1.1",
     "get-port": "^5.1.1",
     "graphql": "^15.3.0",

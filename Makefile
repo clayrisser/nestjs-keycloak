@@ -15,16 +15,16 @@ BUILD_DEPS := $(patsubst src/%.ts,lib/%.d.ts,$(shell find src -name '*.ts' -not 
 	$(patsubst src/%.tsx,lib/%.d.ts,$(shell find src -name '*.tsx'))
 BUILD_TARGET := $(BUILD_DEPS) lib
 
-FORMAT_DEPS := $(patsubst %,$(DONE)/_format/%,$(shell $(GIT) ls-files | grep -E "((json)|(ya?ml)|(md)|([jt]sx?))$$"))
+FORMAT_DEPS := $(patsubst %,$(DONE)/_format/%,$(shell $(GIT) ls-files | grep -v -E "^example\/" | grep -E "\.((json)|(ya?ml)|(md)|([jt]sx?))$$"))
 FORMAT_TARGET := $(FORMAT_DEPS) $(DONE)/format
 
-LINT_DEPS := $(patsubst %,$(DONE)/_lint/%,$(shell $(GIT) ls-files | grep -E "([jt]sx?)$$"))
+LINT_DEPS := $(patsubst %,$(DONE)/_lint/%,$(shell $(GIT) ls-files | grep -v -E "^example\/" | grep -E "\.([jt]sx?)$$"))
 LINT_TARGET := $(LINT_DEPS) $(DONE)/lint
 
 SPELLCHECK_DEPS := $(patsubst %,$(DONE)/_spellcheck/%,$(shell $(GIT) ls-files))
 SPELLCHECK_TARGET := $(SPELLCHECK_DEPS) $(DONE)/spellcheck
 
-TEST_DEPS := $(patsubst %,$(DONE)/_test/%,$(shell $(GIT) ls-files | grep -E "([jt]sx?)$$"))
+TEST_DEPS := $(patsubst %,$(DONE)/_test/%,$(shell $(GIT) ls-files | grep -v -E "^example\/" | grep -E "\.([jt]sx?)$$"))
 TEST_TARGET := $(TEST_DEPS) $(DONE)/test
 
 .PHONY: all
@@ -116,7 +116,7 @@ lib:
 	@$(BABEL) src -d lib --extensions '.ts,.tsx' --source-maps
 	@$(TSC) -d --emitDeclarationOnly
 	@cp -r node_modules/.tmp/lib/src/. lib $(NOFAIL)
-	-@rm -rf example/node_modules/nestjs-crud-prisma/lib && cp -r lib example/node_modules/nestjs-crud-prisma/lib
+	-@rm -rf example/node_modules/nestjs-keycloak/lib && cp -r lib example/node_modules/nestjs-keycloak/lib
 
 .PHONY: coverage
 coverage: ~lint
@@ -151,14 +151,24 @@ ifeq ($(PLATFORM), win32)
 		-e !/node_modules/**/* \
 		-e !/yarn.lock \
 		-e !/pnpm-lock.yaml \
-		-e !/package-lock.json
+		-e !/package-lock.json \
+		-e !/*/node_modules \
+		-e !/*/node_modules/**/* \
+		-e !/*/yarn.lock \
+		-e !/*/pnpm-lock.yaml \
+		-e !/*/package-lock.json
 else
 	-@$(GIT) clean -fXd \
 		-e \!/node_modules \
 		-e \!/node_modules/**/* \
 		-e \!/yarn.lock \
 		-e \!/pnpm-lock.yaml \
-		-e \!/package-lock.json
+		-e \!/package-lock.json \
+		-e \!/*/node_modules \
+		-e \!/*/node_modules/**/* \
+		-e \!/*/yarn.lock \
+		-e \!/*/pnpm-lock.yaml \
+		-e \!/*/package-lock.json
 endif
 	-@$(RM) -rf node_modules/.cache
 	-@$(RM) -rf node_modules/.make

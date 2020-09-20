@@ -1,6 +1,10 @@
 import Keycloak from 'keycloak-connect';
 import { DynamicModule, Module, Provider, HttpModule } from '@nestjs/common';
-import { KEYCLOAK_OPTIONS, KEYCLOAK_INSTANCE } from './constants';
+import {
+  KEYCLOAK_OPTIONS,
+  KEYCLOAK_INSTANCE,
+  KEYCLOAK_SETUP
+} from './constants';
 import { KeycloakAsyncOptions } from './types';
 import { KeycloakService } from './keycloak.service';
 
@@ -26,17 +30,10 @@ declare interface KeycloakOptions {
 @Module({})
 export class KeycloakModule {
   public static register(options: KeycloakOptions): DynamicModule {
+    this.setup(options);
     return {
       module: KeycloakModule,
-      imports: [
-        HttpModule.registerAsync({
-          useFactory: (options: KeycloakOptions) => ({
-            baseURL: options.authServerUrl,
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-          }),
-          inject: [KEYCLOAK_OPTIONS]
-        })
-      ],
+      imports: [HttpModule],
       providers: [
         KeycloakService,
         this.keycloakProvider,
@@ -54,20 +51,18 @@ export class KeycloakModule {
   ): DynamicModule {
     return {
       module: KeycloakModule,
-      imports: [
-        ...(asyncOptions.imports || []),
-        HttpModule.registerAsync({
-          useFactory: (options: KeycloakOptions) => ({
-            baseURL: options.authServerUrl,
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-          }),
-          inject: [KEYCLOAK_OPTIONS]
-        })
-      ],
+      imports: [...(asyncOptions.imports || []), HttpModule],
       providers: [
         KeycloakService,
         this.createOptionsProviders(asyncOptions),
-        this.keycloakProvider
+        this.keycloakProvider,
+        {
+          provide: KEYCLOAK_SETUP,
+          useFactory(options: KeycloakOptions) {
+            KeycloakModule.setup(options);
+          },
+          inject: [KEYCLOAK_OPTIONS]
+        }
       ],
       exports: [KEYCLOAK_OPTIONS, KeycloakService, this.keycloakProvider]
     };
@@ -96,4 +91,8 @@ export class KeycloakModule {
     },
     inject: [KEYCLOAK_OPTIONS]
   };
+
+  static async setup(options: KeycloakOptions) {
+    console.log('setting up keycloak', options);
+  }
 }

@@ -3,7 +3,7 @@ import session from 'express-session';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard, KeycloakModule, ResourceGuard } from 'nestjs-keycloak';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { Module } from '@nestjs/common';
+import { Module, Global, HttpModule } from '@nestjs/common';
 import { NestSessionOptions, SessionModule } from 'nestjs-session';
 import { PassportModule } from '@nestjs/passport';
 import { RedisService, RedisModule, RedisModuleOptions } from 'nestjs-redis';
@@ -11,6 +11,7 @@ import modules from './modules';
 
 const RedisStore = ConnectRedis(session);
 
+@Global()
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -53,6 +54,7 @@ const RedisStore = ConnectRedis(session);
       }
     }),
     PassportModule.register({ session: true }),
+    HttpModule,
     ...modules
   ],
   controllers: [],
@@ -65,6 +67,7 @@ const RedisStore = ConnectRedis(session);
       provide: APP_GUARD,
       useClass: ResourceGuard
     }
-  ]
+  ],
+  exports: [KeycloakModule]
 })
 export class AppModule {}
