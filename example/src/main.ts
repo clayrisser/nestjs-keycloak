@@ -38,11 +38,7 @@ const adapter =
     NestExpressApplication | NestFastifyApplication
   >(
     AppModule,
-    adapter === Adapter.Fastify
-      ? new FastifyAdapter()
-      : new ExpressAdapter({
-          bodyParser: true
-        }),
+    adapter === Adapter.Fastify ? new FastifyAdapter() : new ExpressAdapter(),
     { bodyParser: true }
   );
   if (adapter === Adapter.Fastify) {
