@@ -159,7 +159,7 @@ start: ~format
 
 .PHONY: env
 env: .env
-.env:
+.env: example.env
 	@cp example.env .env
 
 .PHONY: clean
@@ -201,6 +201,7 @@ prisma-%:
 .PHONY: postgres seed stop up
 deps: docker-deps
 keycloak: docker-keycloak
+logs: docker-logs
 postgres: docker-postgres
 redis: docker-redis
 save: env prisma-save
