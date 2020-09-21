@@ -1,12 +1,10 @@
 import Keycloak from 'keycloak-connect';
-import KcAdminClient from 'keycloak-admin';
-import axios from 'axios';
-import { DynamicModule, Module, Provider } from '@nestjs/common';
+import { DynamicModule, Module, Provider, HttpModule } from '@nestjs/common';
 import {
-  KeycloakAxiosProvider,
-  KEYCLOAK_AXIOS
-} from './providers/axios.provider';
-import { KEYCLOAK_OPTIONS, KEYCLOAK_INSTANCE } from './constants';
+  KEYCLOAK_OPTIONS,
+  KEYCLOAK_INSTANCE,
+  KEYCLOAK_SETUP
+} from './constants';
 import { KeycloakAsyncOptions } from './types';
 import { KeycloakService } from './keycloak.service';
 
@@ -32,11 +30,11 @@ declare interface KeycloakOptions {
 @Module({})
 export class KeycloakModule {
   public static register(options: KeycloakOptions): DynamicModule {
-    KeycloakModule.setupKeycloak(options);
+    this.setup(options);
     return {
       module: KeycloakModule,
+      imports: [HttpModule],
       providers: [
-        KeycloakAxiosProvider,
         KeycloakService,
         this.keycloakProvider,
         {
@@ -44,12 +42,7 @@ export class KeycloakModule {
           useValue: options
         }
       ],
-      exports: [
-        KEYCLOAK_OPTIONS,
-        KeycloakService,
-        this.keycloakProvider,
-        KEYCLOAK_AXIOS
-      ]
+      exports: [KEYCLOAK_OPTIONS, KeycloakService, this.keycloakProvider]
     };
   }
 
@@ -59,19 +52,20 @@ export class KeycloakModule {
     KeycloakModule.setupKeycloak({});
     return {
       module: KeycloakModule,
-      imports: asyncOptions.imports || [],
+      imports: [...(asyncOptions.imports || []), HttpModule],
       providers: [
-        KeycloakAxiosProvider,
         KeycloakService,
         this.createOptionsProviders(asyncOptions),
-        this.keycloakProvider
-      ],
-      exports: [
-        KEYCLOAK_OPTIONS,
-        KeycloakService,
         this.keycloakProvider,
-        KEYCLOAK_AXIOS
-      ]
+        {
+          provide: KEYCLOAK_SETUP,
+          useFactory(options: KeycloakOptions) {
+            KeycloakModule.setup(options);
+          },
+          inject: [KEYCLOAK_OPTIONS]
+        }
+      ],
+      exports: [KEYCLOAK_OPTIONS, KeycloakService, this.keycloakProvider]
     };
   }
 
@@ -99,118 +93,7 @@ export class KeycloakModule {
     inject: [KEYCLOAK_OPTIONS]
   };
 
-  public static async setupKeycloak(options: KeycloakOptions) {
-    console.log(options);
-    console.log('call keycloak endpoint APIs');
-    /*
-    resources  {
-      exampleResourceName: [scope1, scope2],
-    }
-    */
-    const roles = ['admin', 'user'];
-    const kcAdminClient = new KcAdminClient();
-    kcAdminClient.auth({
-      username: 'admin ',
-      password: 'pass',
-      grantType: 'password',
-      clientId: 'admin-cli'
-    });
-    kcAdminClient.setConfig({
-      realmName: 'Nestjs-keycloak-example'
-    });
-    roles.forEach(async (role) => {
-      const createdRole = await kcAdminClient.roles.create({
-        name: role
-      });
-      console.log(createdRole);
-    });
-  }
-
-  public static async enableAuthorization(realm: string, id: string) {
-    return axios.put(
-      `http://localhost:8080/auth/admin/realms/${realm}/clients/${id}`,
-      {
-        authorizationServicesEnabled: true,
-        serviceAccountsEnabled: true
-      }
-    );
-  }
-
-  public static async getRoles(realm: string, id: string) {
-    return axios.get(
-      `http://localhost:8080/auth/admin/${realm}/clients/${id}/roles`
-    );
-  }
-
-  public static async createRoles(realm: string, id: string, role: string) {
-    return axios.post(
-      `http://localhost:8080/auth/admin/${realm}/clients/${id}/roles`,
-      {
-        name: role
-      }
-    );
-  }
-
-  public static async getResources(realm: string, id: string) {
-    return axios.get(
-      `http://localhost:8080/auth/admin/realms/${realm}/clients/${id}/authz/resource-server`
-    );
-  }
-
-  public static async createResource(
-    realm: string,
-    id: string,
-    resourceName: string
-  ) {
-    return axios.post(
-      `http://localhost:8080/auth/admin/realms/${realm}/clients/${id}/authz/resource-server/resource`,
-      {
-        attributes: {},
-        displayName: resourceName,
-        name: resourceName,
-        ownerManagedAccess: '',
-        scopes: [],
-        uris: []
-      }
-    );
-  }
-
-  public static updateResource(
-    realm: string,
-    id: string,
-    resourceId: string,
-    resourceName: string,
-    scopeId: string,
-    scopeName: string
-  ) {
-    return axios.put(
-      'http://localhost:8080/auth/admin/realms/nestjs-keycloak-example/clients/cb11fd17-46df-419a-9c67-4a69d1be66ae/authz/resource-server/resource/e7e61d07-9f90-4c44-82d0-71e4009fd99e',
-      {
-        attributes: {},
-        displayName: resourceName,
-        name: resourceName,
-        owner: {
-          id, // client ID
-          name: realm
-        },
-        ownerManagedAccess: false,
-        scopes: [{ id: scopeId, name: scopeName }],
-        uris: [],
-        _id: resourceId
-      }
-    );
-  }
-
-  public static async getScopes(realm: string, id: string) {
-    return axios.get(
-      `http://localhost:8080/auth/admin/realms/${realm}/clients/${id}/authz/resource-server`
-    );
-  }
-
-  public static async createScope(realm: string, id: string, scope: string) {
-    return axios.post(
-      `http://localhost:8080/auth/admin/realms/${realm}/clients/${id}/authz/resource-server/scope`,
-      { name: scope }
-    );
+  static async setup(options: KeycloakOptions) {
+    console.log('setting up keycloak', options);
   }
 }

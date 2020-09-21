@@ -2,10 +2,10 @@
   "language": "en",
   "version": "0.1",
   "words": [
-    "kauth",
     "keycloak",
     "keycloaked",
+    "makefiles",
     "nestjs",
-    "userinfo"
+    "risser"
   ]
 }

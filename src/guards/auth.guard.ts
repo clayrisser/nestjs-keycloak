@@ -1,16 +1,15 @@
-import { AxiosStatic } from 'axios';
 import { Grant, Keycloak, Token } from 'keycloak-connect';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import {
   CanActivate,
   ExecutionContext,
+  HttpService,
   Inject,
   Injectable,
   Logger
 } from '@nestjs/common';
 import authenticate from '../authenticate';
-import { KEYCLOAK_AXIOS } from '../providers/axios.provider';
 import { KEYCLOAK_INSTANCE, KEYCLOAK_OPTIONS } from '../constants';
 import { KeycloakOptions, KeycloakedRequest, UserInfo } from '../types';
 import { getReq, extractJwt } from '../utils';
@@ -24,7 +23,7 @@ export class AuthGuard implements CanActivate {
     private readonly keycloak: Keycloak,
     @Inject(KEYCLOAK_OPTIONS) private options: KeycloakOptions,
     private readonly reflector: Reflector,
-    @Inject(KEYCLOAK_AXIOS) private readonly axios: AxiosStatic
+    private httpService: HttpService
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -99,11 +98,7 @@ export class AuthGuard implements CanActivate {
     const accessGrant = !!accessToken?.length;
     if (!accessToken && req.session?.refreshToken?.length) {
       try {
-        const api = this.axios.create({
-          baseURL: this.options.authServerUrl,
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-        });
-        const result = await authenticate(req, this.options, api, {
+        const result = await authenticate(req, this.options, this.httpService, {
           refreshToken: req.session.refreshToken
         });
         accessToken = result.accessToken;

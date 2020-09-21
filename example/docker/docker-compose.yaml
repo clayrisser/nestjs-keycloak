@@ -1,0 +1,89 @@
+version: '3.7'
+
+services:
+  app:
+    container_name: ${NAME}
+    image: ${IMAGE}:latest
+    ports:
+      - 3000:3000
+    environment:
+      DEBUG: '1'
+      GRAPHQL_PLAYGROUND: '1'
+      SWAGGER: '1'
+    depends_on:
+      - keycloak
+      - postgres
+      - redis
+
+  deps:
+    container_name: ${NAME}-deps
+    image: busybox
+    command: tail -f /dev/null
+    depends_on:
+      - keycloak
+      - postgres
+      - redis
+
+  keycloak:
+    container_name: ${NAME}-keycloak
+    image: jboss/keycloak:latest
+    restart: always
+    ports:
+      - 8080:8080
+    volumes:
+      - ./realm-export.json:/tmp/realm-export.json:ro
+    environment:
+      DB_ADDR: keycloak-postgres
+      DB_DATABASE: postgres
+      DB_PASSWORD: postgres
+      DB_SCHEMA: public
+      DB_USER: postgres
+      DB_VENDOR: POSTGRES
+      KEYCLOAK_IMPORT: /tmp/realm-export.json
+      KEYCLOAK_PASSWORD: pass
+      KEYCLOAK_USER: admin
+      PROXY_ADDRESS_FORWARDING: 'true'
+    depends_on:
+      - keycloak-postgres
+
+  keycloak-postgres:
+    image: postgres:12
+    container_name: ${NAME}-keycloak-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+    volumes:
+      - keycloak-postgres:/var/lib/postgresql/data
+
+  postgres:
+    image: postgres:12
+    container_name: ${NAME}-postgres
+    restart: always
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+    volumes:
+      - postgres:/var/lib/postgresql/data
+
+  redis:
+    image: redis:6.0.4
+    container_name: ${NAME}-redis
+    restart: always
+    command: redis-server --appendonly yes
+    ports:
+      - 6379:6379
+    volumes:
+      - redis:/data
+
+volumes:
+  keycloak-postgres:
+    name: keycloak-postgres-${NAME}
+  postgres:
+    name: postgres-${NAME}
+  redis:
+    name: redis-${NAME}

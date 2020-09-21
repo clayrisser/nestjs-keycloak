@@ -6,11 +6,6 @@
 
 Please ★ this repo if you found it useful ★ ★ ★
 
-## Features
-
-- nestjs
-- keycloak
-
 ## Installation
 
 ```sh
