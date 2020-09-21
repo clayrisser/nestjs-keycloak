@@ -21,7 +21,7 @@ FORMAT_TARGET := $(FORMAT_DEPS) $(DONE)/format
 LINT_DEPS := $(patsubst %,$(DONE)/_lint/%,$(shell $(GIT) ls-files | grep -v -E "^example\/" | grep -E "\.([jt]sx?)$$"))
 LINT_TARGET := $(LINT_DEPS) $(DONE)/lint
 
-SPELLCHECK_DEPS := $(patsubst %,$(DONE)/_spellcheck/%,$(shell $(GIT) ls-files))
+SPELLCHECK_DEPS := $(patsubst %,$(DONE)/_spellcheck/%,$(shell $(GIT) ls-files | grep -v -E "^example\/"))
 SPELLCHECK_TARGET := $(SPELLCHECK_DEPS) $(DONE)/spellcheck
 
 TEST_DEPS := $(patsubst %,$(DONE)/_test/%,$(shell $(GIT) ls-files | grep -v -E "^example\/" | grep -E "\.([jt]sx?)$$"))
