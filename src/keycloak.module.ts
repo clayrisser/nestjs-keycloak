@@ -30,7 +30,7 @@ declare interface KeycloakOptions {
 @Module({})
 export class KeycloakModule {
   public static register(options: KeycloakOptions): DynamicModule {
-    this.setup(options);
+    // this.setup(options);
     return {
       module: KeycloakModule,
       imports: [HttpModule],
@@ -40,6 +40,13 @@ export class KeycloakModule {
         {
           provide: KEYCLOAK_OPTIONS,
           useValue: options
+        },        
+        {
+          provide: KEYCLOAK_SETUP,
+          useFactory(options: KeycloakOptions, httpService) {
+            KeycloakModule.setup(options, httpService);
+          },
+          inject: [KEYCLOAK_OPTIONS, HttpService]
         }
       ],
       exports: [KEYCLOAK_OPTIONS, KeycloakService, this.keycloakProvider]
@@ -58,10 +65,10 @@ export class KeycloakModule {
         this.keycloakProvider,
         {
           provide: KEYCLOAK_SETUP,
-          useFactory(options: KeycloakOptions) {
-            KeycloakModule.setup(options);
+          useFactory(options: KeycloakOptions, httpService) {
+            KeycloakModule.setup(options, httpService);
           },
-          inject: [KEYCLOAK_OPTIONS]
+          inject: [KEYCLOAK_OPTIONS, HttpService]
         }
       ],
       exports: [KEYCLOAK_OPTIONS, KeycloakService, this.keycloakProvider]
@@ -92,7 +99,9 @@ export class KeycloakModule {
     inject: [KEYCLOAK_OPTIONS]
   };
 
-  static async setup(options: KeycloakOptions) {
-    console.log('setting up keycloak', options);
+  static async setup(options: KeycloakOptions, httpService) {
+    console .log('setting up keycloak', options);
+    const register = new Register(options)
+    await register.setup()
   }
 }
