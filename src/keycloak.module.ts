@@ -24,6 +24,7 @@ export * from './decorators/scopes.decorator';
 export * from './guards/auth.guard';
 export * from './guards/resource.guard';
 export * from './keycloak.service';
+export * from './typeGraphql';
 export * from './types';
 
 @Module({})

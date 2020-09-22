@@ -1,7 +1,6 @@
 import ConnectRedis from 'connect-redis';
 import session from 'express-session';
 import { APP_GUARD } from '@nestjs/core';
-import { AuthGuard, KeycloakModule, ResourceGuard } from 'nestjs-keycloak';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Module, Global, HttpModule } from '@nestjs/common';
 import { NestSessionOptions, SessionModule } from 'nestjs-session';
@@ -9,6 +8,13 @@ import { PassportModule } from '@nestjs/passport';
 import { PrismaService, PrismaModule } from 'nestjs-prisma';
 import { RedisService, RedisModule, RedisModuleOptions } from 'nestjs-redis';
 import { TypeGraphQLModule } from '@codejamninja/typegraphql-nestjs';
+import {
+  AuthGuard,
+  KeycloakModule,
+  ResourceGuard,
+  TypeGraphqlAuthGuard,
+  TypeGraphqlResourceGuard
+} from 'nestjs-keycloak';
 import modules from './modules';
 import { GraphqlCtx } from './types';
 
@@ -62,6 +68,7 @@ const RedisStore = ConnectRedis(session);
       useFactory: async (config: ConfigService, prisma: PrismaService) => ({
         cors: false,
         context: ({ req }): GraphqlCtx => ({ prisma, req }),
+        globalMiddlewares: [TypeGraphqlAuthGuard, TypeGraphqlResourceGuard],
         debug: config.get('DEBUG') === '1',
         playground:
           config.get('GRAPHQL_PLAYGROUND') === '1'
@@ -77,7 +84,6 @@ const RedisStore = ConnectRedis(session);
     HttpModule,
     ...modules
   ],
-  controllers: [],
   providers: [
     {
       provide: APP_GUARD,
