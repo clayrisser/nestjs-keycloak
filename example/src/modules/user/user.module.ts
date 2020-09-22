@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from 'nestjs-prisma-module';
+import { PrismaModule } from 'nestjs-prisma';
 import { UserController } from './user.controller';
 import { UserCrudResolver } from '../../generated/type-graphql';
 import { UserService } from './user.service';

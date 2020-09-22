@@ -3,12 +3,12 @@ import session from 'express-session';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard, KeycloakModule, ResourceGuard } from 'nestjs-keycloak';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { GraphQLModule } from '@nestjs/graphql';
 import { Module, Global, HttpModule } from '@nestjs/common';
 import { NestSessionOptions, SessionModule } from 'nestjs-session';
 import { PassportModule } from '@nestjs/passport';
-import { PrismaService, PrismaModule } from 'nestjs-prisma-module';
+import { PrismaService, PrismaModule } from 'nestjs-prisma';
 import { RedisService, RedisModule, RedisModuleOptions } from 'nestjs-redis';
+import { TypeGraphQLModule } from '@codejamninja/typegraphql-nestjs';
 import modules from './modules';
 import { GraphqlCtxShape } from './decorators';
 
@@ -58,7 +58,7 @@ const RedisStore = ConnectRedis(session);
       }
     }),
     PassportModule.register({ session: true }),
-    GraphQLModule.forRootAsync({
+    TypeGraphQLModule.forRootAsync({
       useFactory: async (config: ConfigService, prisma: PrismaService) => ({
         autoSchemaFile: 'schema.graphql',
         cors: false,

@@ -53,7 +53,7 @@ export class KeycloakModule {
       imports: [...(asyncOptions.imports || []), HttpModule],
       providers: [
         KeycloakService,
-        this.createOptionsProviders(asyncOptions),
+        this.createOptionsProvider(asyncOptions),
         this.keycloakProvider,
         this.createKeycloakRegisterProvider()
       ],
@@ -71,7 +71,7 @@ export class KeycloakModule {
     };
   }
 
-  private static createOptionsProviders(asyncOptions: KeycloakAsyncOptions) {
+  private static createOptionsProvider(asyncOptions: KeycloakAsyncOptions) {
     if (!asyncOptions.useFactory) {
       throw new Error("registerAsync must have 'useFactory'");
     }

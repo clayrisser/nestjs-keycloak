@@ -1,5 +1,5 @@
 import { GqlExecutionContext } from '@nestjs/graphql';
-import { PrismaService } from 'nestjs-prisma-module';
+import { PrismaService } from 'nestjs-prisma';
 import { Request } from 'express';
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 

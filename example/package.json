@@ -44,6 +44,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.11.2",
+    "@codejamninja/typegraphql-nestjs": "^0.2.3-0",
     "@nestjs/graphql": "^7.6.0",
     "@nestjs/passport": "^7.1.0",
     "@nestjs/platform-fastify": "^7.4.4",
@@ -66,7 +67,7 @@
     "graphql-type-json": "^0.3.2",
     "nestjs-crud-prisma": "^0.0.2",
     "nestjs-keycloak": "workspace:*",
-    "nestjs-prisma-module": "^0.0.1",
+    "nestjs-prisma": "^0.7.0",
     "nestjs-redis": "^1.2.8",
     "nestjs-session": "^1.0.1",
     "ora": "^5.1.0",
