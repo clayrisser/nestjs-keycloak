@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import controllers from './controllers';
-import resolvers from './resolvers';
+import { CountController } from './count.controller';
+import { CountResolver } from './count.resolver';
 
 @Module({
-  controllers,
-  providers: [...resolvers]
+  controllers: [CountController],
+  providers: [CountResolver]
 })
 export class CountModule {}

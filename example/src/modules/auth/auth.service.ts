@@ -1,6 +1,6 @@
 import { Injectable, Scope } from '@nestjs/common';
 import { KeycloakService, LoginArgs } from 'nestjs-keycloak';
-import { Auth } from '../models';
+import { Auth } from './auth.model';
 
 @Injectable({ scope: Scope.REQUEST })
 export class AuthService {

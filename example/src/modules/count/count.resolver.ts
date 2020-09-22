@@ -1,6 +1,6 @@
 import { Resolver, Query } from '@nestjs/graphql';
 import { Roles } from 'nestjs-keycloak';
-import { GraphqlCtx, GraphqlCtxShape } from '../../../decorators';
+import { GraphqlCtx, GraphqlCtxShape } from '../../decorators';
 
 @Resolver()
 export class CountResolver {

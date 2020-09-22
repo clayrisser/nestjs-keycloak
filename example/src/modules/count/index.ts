@@ -1,3 +1,3 @@
-export * from './controllers';
+export * from './count.controller';
 export * from './count.module';
-export * from './resolvers';
+export * from './count.resolver';
