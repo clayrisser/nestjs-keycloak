@@ -1,12 +1,19 @@
 import Keycloak from 'keycloak-connect';
-import { DynamicModule, Module, Provider, HttpModule } from '@nestjs/common';
+import {
+  DynamicModule,
+  Module,
+  Provider,
+  HttpModule,
+  HttpService
+} from '@nestjs/common';
+import Register from './register';
+import { KeycloakAsyncOptions, KeycloakOptions } from './types';
+import { KeycloakService } from './keycloak.service';
 import {
   KEYCLOAK_OPTIONS,
   KEYCLOAK_INSTANCE,
-  KEYCLOAK_SETUP
+  KEYCLOAK_REGISTER
 } from './constants';
-import { KeycloakAsyncOptions } from './types';
-import { KeycloakService } from './keycloak.service';
 
 export * from './authenticate';
 export * from './constants';
@@ -19,18 +26,9 @@ export * from './guards/resource.guard';
 export * from './keycloak.service';
 export * from './types';
 
-declare interface KeycloakOptions {
-  authServerUrl: string;
-  clientId?: string;
-  realm?: string;
-  realmPublicKey?: string;
-  secret?: string;
-}
-
 @Module({})
 export class KeycloakModule {
   public static register(options: KeycloakOptions): DynamicModule {
-    // this.setup(options);
     return {
       module: KeycloakModule,
       imports: [HttpModule],
@@ -40,14 +38,8 @@ export class KeycloakModule {
         {
           provide: KEYCLOAK_OPTIONS,
           useValue: options
-        },        
-        {
-          provide: KEYCLOAK_SETUP,
-          useFactory(options: KeycloakOptions, httpService) {
-            KeycloakModule.setup(options, httpService);
-          },
-          inject: [KEYCLOAK_OPTIONS, HttpService]
-        }
+        },
+        this.createKeycloakRegisterProvider()
       ],
       exports: [KEYCLOAK_OPTIONS, KeycloakService, this.keycloakProvider]
     };
@@ -63,15 +55,19 @@ export class KeycloakModule {
         KeycloakService,
         this.createOptionsProviders(asyncOptions),
         this.keycloakProvider,
-        {
-          provide: KEYCLOAK_SETUP,
-          useFactory(options: KeycloakOptions, httpService) {
-            KeycloakModule.setup(options, httpService);
-          },
-          inject: [KEYCLOAK_OPTIONS, HttpService]
-        }
+        this.createKeycloakRegisterProvider()
       ],
       exports: [KEYCLOAK_OPTIONS, KeycloakService, this.keycloakProvider]
+    };
+  }
+
+  private static createKeycloakRegisterProvider() {
+    return {
+      provide: KEYCLOAK_REGISTER,
+      useFactory(options: KeycloakOptions, httpService: HttpService) {
+        KeycloakModule.setup(options, httpService);
+      },
+      inject: [KEYCLOAK_OPTIONS, HttpService]
     };
   }
 
@@ -99,9 +95,8 @@ export class KeycloakModule {
     inject: [KEYCLOAK_OPTIONS]
   };
 
-  static async setup(options: KeycloakOptions, httpService) {
-    console .log('setting up keycloak', options);
-    const register = new Register(options)
-    await register.setup()
+  static async setup(options: KeycloakOptions, httpService: HttpService) {
+    const register = new Register(options, httpService);
+    await register.setup();
   }
 }

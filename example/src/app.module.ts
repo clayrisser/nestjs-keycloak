@@ -3,11 +3,13 @@ import session from 'express-session';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard, KeycloakModule, ResourceGuard } from 'nestjs-keycloak';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { GraphQLModule } from '@nestjs/graphql';
 import { Module, Global, HttpModule } from '@nestjs/common';
 import { NestSessionOptions, SessionModule } from 'nestjs-session';
 import { PassportModule } from '@nestjs/passport';
 import { RedisService, RedisModule, RedisModuleOptions } from 'nestjs-redis';
 import modules from './modules';
+import { GraphqlCtxShape } from './decorators';
 
 const RedisStore = ConnectRedis(session);
 
@@ -54,6 +56,23 @@ const RedisStore = ConnectRedis(session);
       }
     }),
     PassportModule.register({ session: true }),
+    GraphQLModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: async (config: ConfigService) => ({
+        autoSchemaFile: 'schema.graphql',
+        cors: false,
+        context: ({ req }): GraphqlCtxShape => ({ req }),
+        debug: config.get('DEBUG') === '1',
+        playground:
+          config.get('GRAPHQL_PLAYGROUND') === '1'
+            ? {
+                settings: {
+                  'request.credentials': 'include'
+                }
+              }
+            : false
+      })
+    }),
     HttpModule,
     ...modules
   ],

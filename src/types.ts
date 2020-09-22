@@ -29,8 +29,9 @@ export interface KeycloakAsyncOptions extends Pick<ModuleMetadata, 'imports'> {
 
 export interface KeycloakOptions {
   authServerUrl: string;
-  clientId: string;
+  clientId?: string;
   debug?: boolean;
-  realm: string;
-  secret: string;
+  realm?: string;
+  realmPublicKey?: string;
+  secret?: string;
 }
