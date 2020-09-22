@@ -45,7 +45,7 @@
   "dependencies": {
     "@babel/runtime": "^7.11.2",
     "@codejamninja/typegraphql-nestjs": "^0.2.3-0",
-    "@nestjs/graphql": "^7.6.0",
+    "@nestjs/graphql": "^7.7.0",
     "@nestjs/passport": "^7.1.0",
     "@nestjs/platform-fastify": "^7.4.4",
     "@nestjs/schematics": "^7.1.2",

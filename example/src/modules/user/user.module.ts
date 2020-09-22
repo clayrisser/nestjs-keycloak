@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from 'nestjs-prisma';
 import { UserController } from './user.controller';
-import { UserCrudResolver } from '../../generated/type-graphql';
+import { UserResolver } from './user.resolver';
 import { UserService } from './user.service';
 
 @Module({
   imports: [PrismaModule],
   controllers: [UserController],
-  providers: [UserService, UserCrudResolver]
+  providers: [UserService, UserResolver]
 })
 export class UserModule {}

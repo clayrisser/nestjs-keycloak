@@ -10,7 +10,7 @@ import { PrismaService, PrismaModule } from 'nestjs-prisma';
 import { RedisService, RedisModule, RedisModuleOptions } from 'nestjs-redis';
 import { TypeGraphQLModule } from '@codejamninja/typegraphql-nestjs';
 import modules from './modules';
-import { GraphqlCtxShape } from './decorators';
+import { GraphqlCtx } from './types';
 
 const RedisStore = ConnectRedis(session);
 
@@ -60,9 +60,8 @@ const RedisStore = ConnectRedis(session);
     PassportModule.register({ session: true }),
     TypeGraphQLModule.forRootAsync({
       useFactory: async (config: ConfigService, prisma: PrismaService) => ({
-        autoSchemaFile: 'schema.graphql',
         cors: false,
-        context: ({ req }): GraphqlCtxShape => ({ prisma, req }),
+        context: ({ req }): GraphqlCtx => ({ prisma, req }),
         debug: config.get('DEBUG') === '1',
         playground:
           config.get('GRAPHQL_PLAYGROUND') === '1'
