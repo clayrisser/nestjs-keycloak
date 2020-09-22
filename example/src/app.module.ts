@@ -7,6 +7,7 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { Module, Global, HttpModule } from '@nestjs/common';
 import { NestSessionOptions, SessionModule } from 'nestjs-session';
 import { PassportModule } from '@nestjs/passport';
+import { PrismaService, PrismaModule } from 'nestjs-prisma-module';
 import { RedisService, RedisModule, RedisModuleOptions } from 'nestjs-redis';
 import modules from './modules';
 import { GraphqlCtxShape } from './decorators';
@@ -17,6 +18,7 @@ const RedisStore = ConnectRedis(session);
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    PrismaModule,
     KeycloakModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -57,11 +59,10 @@ const RedisStore = ConnectRedis(session);
     }),
     PassportModule.register({ session: true }),
     GraphQLModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: async (config: ConfigService) => ({
+      useFactory: async (config: ConfigService, prisma: PrismaService) => ({
         autoSchemaFile: 'schema.graphql',
         cors: false,
-        context: ({ req }): GraphqlCtxShape => ({ req }),
+        context: ({ req }): GraphqlCtxShape => ({ prisma, req }),
         debug: config.get('DEBUG') === '1',
         playground:
           config.get('GRAPHQL_PLAYGROUND') === '1'
@@ -71,7 +72,8 @@ const RedisStore = ConnectRedis(session);
                 }
               }
             : false
-      })
+      }),
+      inject: [ConfigService, PrismaService]
     }),
     HttpModule,
     ...modules
@@ -87,6 +89,6 @@ const RedisStore = ConnectRedis(session);
       useClass: ResourceGuard
     }
   ],
-  exports: [KeycloakModule]
+  exports: [KeycloakModule, PrismaModule]
 })
 export class AppModule {}

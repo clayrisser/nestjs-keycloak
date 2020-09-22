@@ -1,6 +1,6 @@
 import { Controller, Get, Session, Render, Req } from '@nestjs/common';
 import { Request } from 'express';
-import { Public, Resource /* Roles */ } from 'nestjs-keycloak';
+import { Public, Resource, Roles } from 'nestjs-keycloak';
 import { SessionData } from '../../../types';
 
 @Controller()
@@ -15,7 +15,7 @@ export class CountController {
     return { message: 'Hello, world!' };
   }
 
-  // @Roles('admin')
+  @Roles('howdy')
   @Get('/count')
   getCount(@Req() _req: Request, @Session() session: SessionData): number {
     session.count = ++session.count || 0;
