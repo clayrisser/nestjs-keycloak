@@ -1,6 +1,5 @@
 import { Grant } from 'keycloak-connect';
 import { ModuleMetadata } from '@nestjs/common/interfaces';
-import { Provider } from '@nestjs/common';
 import { Request } from 'express';
 
 export interface UserInfo {
@@ -22,15 +21,15 @@ export type KeycloakedRequest<T = Request> = {
 } & T;
 
 export interface KeycloakAsyncOptions extends Pick<ModuleMetadata, 'imports'> {
-  axiosProvider?: Provider;
   inject?: any[];
   useFactory?: (...args: any[]) => Promise<KeycloakOptions> | KeycloakOptions;
 }
 
 export interface KeycloakOptions {
   authServerUrl: string;
-  clientId: string;
+  clientId?: string;
   debug?: boolean;
-  realm: string;
-  secret: string;
+  realm?: string;
+  realmPublicKey?: string;
+  secret?: string;
 }

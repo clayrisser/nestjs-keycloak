@@ -176,6 +176,7 @@ endif
 
 .PHONY: purge
 purge: clean
+	-@$(MAKE) -C example purge
 	-@$(GIT) clean -fXd
 
 .PHONY: report

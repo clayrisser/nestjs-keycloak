@@ -80,3 +80,4 @@ yarn.lock
 tsconfig.tsbuildinfo
 pnpm-lock.yaml
 /src/generated
+/schema.graphql

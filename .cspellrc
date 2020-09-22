@@ -6,6 +6,7 @@
     "keycloaked",
     "makefiles",
     "nestjs",
-    "risser"
+    "risser",
+    "userinfo"
   ]
 }

@@ -12,7 +12,7 @@ import {
   Render,
   Res
 } from '@nestjs/common';
-import { Auth } from '../models';
+import { Auth } from './auth.model';
 
 const ns = 'auth';
 
@@ -56,7 +56,7 @@ export class AuthController {
   @Get(`${ns}/logout`)
   async getLogout(@Res() res: Response) {
     await this.keycloakService.logout();
-    return res.status(302).redirect('/login');
+    return res.status(302).redirect(`/${ns}/login`);
   }
 
   @Get(`${ns}/userinfo`)

@@ -1,12 +1,19 @@
 import Keycloak from 'keycloak-connect';
-import { DynamicModule, Module, Provider, HttpModule } from '@nestjs/common';
+import {
+  DynamicModule,
+  Module,
+  Provider,
+  HttpModule,
+  HttpService
+} from '@nestjs/common';
+import Register from './register';
+import { KeycloakAsyncOptions, KeycloakOptions } from './types';
+import { KeycloakService } from './keycloak.service';
 import {
   KEYCLOAK_OPTIONS,
   KEYCLOAK_INSTANCE,
-  KEYCLOAK_SETUP
+  KEYCLOAK_REGISTER
 } from './constants';
-import { KeycloakAsyncOptions } from './types';
-import { KeycloakService } from './keycloak.service';
 
 export * from './authenticate';
 export * from './constants';
@@ -17,20 +24,12 @@ export * from './decorators/scopes.decorator';
 export * from './guards/auth.guard';
 export * from './guards/resource.guard';
 export * from './keycloak.service';
+export * from './typeGraphql';
 export * from './types';
-
-declare interface KeycloakOptions {
-  authServerUrl: string;
-  clientId?: string;
-  realm?: string;
-  realmPublicKey?: string;
-  secret?: string;
-}
 
 @Module({})
 export class KeycloakModule {
   public static register(options: KeycloakOptions): DynamicModule {
-    this.setup(options);
     return {
       module: KeycloakModule,
       imports: [HttpModule],
@@ -40,7 +39,8 @@ export class KeycloakModule {
         {
           provide: KEYCLOAK_OPTIONS,
           useValue: options
-        }
+        },
+        this.createKeycloakRegisterProvider()
       ],
       exports: [KEYCLOAK_OPTIONS, KeycloakService, this.keycloakProvider]
     };
@@ -55,21 +55,25 @@ export class KeycloakModule {
       imports: [...(asyncOptions.imports || []), HttpModule],
       providers: [
         KeycloakService,
-        this.createOptionsProviders(asyncOptions),
+        this.createOptionsProvider(asyncOptions),
         this.keycloakProvider,
-        {
-          provide: KEYCLOAK_SETUP,
-          useFactory(options: KeycloakOptions) {
-            KeycloakModule.setup(options);
-          },
-          inject: [KEYCLOAK_OPTIONS]
-        }
+        this.createKeycloakRegisterProvider()
       ],
       exports: [KEYCLOAK_OPTIONS, KeycloakService, this.keycloakProvider]
     };
   }
 
-  private static createOptionsProviders(asyncOptions: KeycloakAsyncOptions) {
+  private static createKeycloakRegisterProvider() {
+    return {
+      provide: KEYCLOAK_REGISTER,
+      useFactory(options: KeycloakOptions, httpService: HttpService) {
+        KeycloakModule.setup(options, httpService);
+      },
+      inject: [KEYCLOAK_OPTIONS, HttpService]
+    };
+  }
+
+  private static createOptionsProvider(asyncOptions: KeycloakAsyncOptions) {
     if (!asyncOptions.useFactory) {
       throw new Error("registerAsync must have 'useFactory'");
     }
@@ -93,7 +97,8 @@ export class KeycloakModule {
     inject: [KEYCLOAK_OPTIONS]
   };
 
-  static async setup(options: KeycloakOptions) {
-    console.log('setting up keycloak', options);
+  static async setup(options: KeycloakOptions, httpService: HttpService) {
+    const register = new Register(options, httpService);
+    await register.setup();
   }
 }
