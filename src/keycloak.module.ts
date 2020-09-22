@@ -49,7 +49,6 @@ export class KeycloakModule {
   public static registerAsync(
     asyncOptions: KeycloakAsyncOptions
   ): DynamicModule {
-    KeycloakModule.setupKeycloak({});
     return {
       module: KeycloakModule,
       imports: [...(asyncOptions.imports || []), HttpModule],
@@ -67,7 +66,7 @@ export class KeycloakModule {
     return {
       provide: KEYCLOAK_REGISTER,
       useFactory(options: KeycloakOptions, httpService: HttpService) {
-        KeycloakModule.setup(options, httpService);
+        KeycloakModule.setupKeycloak(options, httpService);
       },
       inject: [KEYCLOAK_OPTIONS, HttpService]
     };
@@ -97,7 +96,10 @@ export class KeycloakModule {
     inject: [KEYCLOAK_OPTIONS]
   };
 
-  static async setup(options: KeycloakOptions, httpService: HttpService) {
+  static async setupKeycloak(
+    options: KeycloakOptions,
+    httpService: HttpService
+  ) {
     const register = new Register(options, httpService);
     await register.setup();
   }

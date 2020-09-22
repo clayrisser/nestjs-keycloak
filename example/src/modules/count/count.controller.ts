@@ -15,7 +15,7 @@ export class CountController {
     return { message: 'Hello, world!' };
   }
 
-  @Roles('howdy')
+  // @Roles('howdy')
   @Get('/count')
   getCount(@Req() _req: Request, @Session() session: SessionData): number {
     session.count = ++session.count || 0;

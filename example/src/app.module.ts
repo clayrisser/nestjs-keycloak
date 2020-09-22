@@ -68,7 +68,7 @@ const RedisStore = ConnectRedis(session);
       useFactory: async (config: ConfigService, prisma: PrismaService) => ({
         cors: false,
         context: ({ req }): GraphqlCtx => ({ prisma, req }),
-        globalMiddlewares: [TypeGraphqlAuthGuard, TypeGraphqlResourceGuard],
+        // globalMiddlewares: [TypeGraphqlAuthGuard, TypeGraphqlResourceGuard],
         debug: config.get('DEBUG') === '1',
         playground:
           config.get('GRAPHQL_PLAYGROUND') === '1'
