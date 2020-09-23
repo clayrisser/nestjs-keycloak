@@ -1,4 +1,5 @@
 import { HttpService } from '@nestjs/common';
+import qs from 'qs';
 import { KeycloakOptions } from './types';
 
 export default class Register {
@@ -9,6 +10,7 @@ export default class Register {
 
   async setup() {
     // REGISTER HERE
+    console.log(this.options, this.httpService);
     const data = {
       roles: ['role1', 'role2', 'role3'],
       resources: {
@@ -16,68 +18,146 @@ export default class Register {
         resource2: ['scope2', 'scope3', 'scope4']
       }
     };
-    this.enableAuthorization();
-    // Get and Create Roles
-    // Get response [{"id":"f07f81d9-3621-42b6-b293-81a8bd50c70d","name":"test","composite":false,"clientRole":true,"containerId":"cb11fd17-46df-419a-9c67-4a69d1be66ae"}]
-    const roles: any = await this.getRoles();
-    data.roles.forEach((role) => {
-      roles.forEach((existingRole: any) => {
-        if (existingRole.name !== role) {
-          this.createRoles(role);
-        }
-      });
-    });
-    // Create Resources
-    // [{"name":"Default Resource","type":"urn:nestjs-keycloak-example:resources:default","owner":{"id":"cb11fd17-46df-419a-9c67-4a69d1be66ae","name":"nestjs-keycloak-example"},"ownerManagedAccess":false,"_id":"8c75b071-c7a3-43e8-b84d-dae1fd0ce284","uris":["/*"]},{"name":"test resource","owner":{"id":"cb11fd17-46df-419a-9c67-4a69d1be66ae","name":"nestjs-keycloak-example"},"ownerManagedAccess":false,"_id":"45adc2e6-c5b8-40c3-87b2-90761ec2c27e","uris":[]}]
-    const resources: any = await this.getResources();
-    Object.keys(data.resources).forEach((resource) => {
-      resources.forEach((existingResource: any) => {
-        if (existingResource.name !== resource) {
-          this.createResource(resource);
-        }
-      });
-    });
-    // Create Scopes
-    // [{"id":"255c02ed-f9d5-4d5a-bd40-6c298ec44df5","name":"test-auth-scope"}]
-    console.log(this.options, this.httpService);
+
+    const getAccessTokenRes = await this.getAccessToken();
+    console.log('getAccessTokenRes', getAccessTokenRes.data);
+    const enableAuthorizationRes = await this.enableAuthorization(
+      getAccessTokenRes.data
+    );
+    console.log('enableAuthorizationRes', enableAuthorizationRes.data);
+    // const roles: any = await this.getRoles();
+    // data.roles.forEach((role) => {
+    //   roles.forEach((existingRole: any) => {
+    //     if (existingRole.name !== role) {
+    //       this.createRoles(role);
+    //     }
+    //   });
+    // });
+    // // Create Resources
+    // const resources: any = await this.getResources();
+    // Object.keys(data.resources).forEach((resource) => {
+    //   resources.forEach((existingResource: any) => {
+    //     if (existingResource.name !== resource) {
+    //       this.createResource(resource);
+    //     }
+    //   });
+    // });
+    // // Create Scopes
   }
 
-  async enableAuthorization() {
+  async getAccessToken() {
     return this.httpService
-      .put(
-        `${this.options.authServerUrl}/admin/realms/${this.options.realm}/clients/${this.options.clientId}`,
+      .post<GetAccessTokenRes>(
+        `${this.options.authServerUrl}/realms/${this.options.realm}/protocol/openid-connect/token`,
+        qs.stringify({
+          grant_type: 'client_credentials',
+          client_id: this.options.clientId,
+          client_secret: this.options.secret
+        }),
         {
-          authorizationServicesEnabled: true,
-          serviceAccountsEnabled: true
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          }
+        }
+      )
+      .toPromise()
+      .catch((e) => {
+        return { data: e };
+      });
+  }
+
+  async refreshAccessToken(refreshToken: string) {
+    return this.httpService
+      .post<GetAccessTokenRes>(
+        `${this.options.authServerUrl}/realms/${this.options.realm}/protocol/openid-connect/token`,
+        {
+          grant_type: 'refresh_token',
+          client_id: this.options.clientId,
+          client_secret: this.options.secret,
+          refresh_token: refreshToken
+        },
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          }
         }
       )
       .toPromise();
   }
 
-  async getRoles() {
-    return this.httpService.get<Array<string>>(
-      `${this.options.authServerUrl}admin/${this.options.realm}/clients/${this.options.clientId}/roles`
-    );
+  async enableAuthorization(res: GetAccessTokenRes) {
+    return this.httpService
+      .put<any>(
+        `${this.options.authServerUrl}/admin/realms/${this.options.realm}/clients/${this.options.clientId}`,
+        qs.stringify({
+          authorizationServicesEnabled: true,
+          serviceAccountsEnabled: true
+        }),
+        {
+          headers: {
+            Authorization: `Bearer ${res.access_token}`
+          }
+        }
+      )
+      .toPromise()
+      .catch(async (e) => {
+        // if (e.response.status === 401) {
+        //   const refreshAccessTokenRes = await this.refreshAccessToken(
+        //     res.refresh_token
+        //   );
+        //   this.enableAuthorization(refreshAccessTokenRes.data);
+        // }
+        return { data: e };
+      });
   }
 
-  async createRoles(role: string) {
+  async getRoles(accessToken: string) {
+    return this.httpService
+      .get<Array<string>>(
+        `${this.options.authServerUrl}admin/${this.options.realm}/clients/${this.options.clientId}/roles`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`
+          }
+        }
+      )
+      .toPromise()
+      .catch(async (e) => {
+        return { data: e };
+      });
+  }
+
+  async createRoles(role: string, accessToken: string) {
     return this.httpService
       .post(
         `${this.options.authServerUrl}admin/${this.options.realm}/clients/${this.options.clientId}/roles`,
         {
           name: role
+        },
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Authorization: `Bearer ${accessToken}`
+          }
         }
       )
       .toPromise();
   }
 
-  async getResources() {
-    return this.httpService.get(
-      `${this.options.authServerUrl}admin/realms/${this.options.realm}/clients/${this.options.clientId}/authz/resource-server/resource`
-    );
+  async getResources(accessToken: string) {
+    return this.httpService
+      .get(
+        `${this.options.authServerUrl}admin/realms/${this.options.realm}/clients/${this.options.clientId}/authz/resource-server/resource`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`
+          }
+        }
+      )
+      .toPromise();
   }
 
-  async createResource(resourceName: string) {
+  async createResource(resourceName: string, accessToken: string) {
     return this.httpService
       .post(
         `${this.options.authServerUrl}admin/realms/${this.options.realm}/clients/${this.options.clientId}/authz/resource-server/resource`,
@@ -88,6 +168,12 @@ export default class Register {
           ownerManagedAccess: '',
           scopes: [],
           uris: []
+        },
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Authorization: `Bearer ${accessToken}`
+          }
         }
       )
       .toPromise();
@@ -97,7 +183,8 @@ export default class Register {
     resourceName: string,
     resourceId: string,
     scopeId: string,
-    scopeName: string
+    scopeName: string,
+    accessToken: string
   ) {
     return this.httpService
       .put(
@@ -114,25 +201,54 @@ export default class Register {
           scopes: [{ id: scopeId, name: scopeName }],
           uris: [],
           _id: resourceId
+        },
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Authorization: `Bearer ${accessToken}`
+          }
         }
       )
       .toPromise();
   }
 
-  async getScopes() {
+  async getScopes(accessToken: string) {
     return this.httpService
       .get(
-        `${this.options.authServerUrl}admin/realms/${this.options.realm}/clients/${this.options.clientId}/authz/resource-server/scope`
+        `${this.options.authServerUrl}admin/realms/${this.options.realm}/clients/${this.options.clientId}/authz/resource-server/scope`,
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Authorization: `Bearer ${accessToken}`
+          }
+        }
       )
       .toPromise();
   }
 
-  async createScope(scope: string) {
+  async createScope(scope: string, accessToken: string) {
     return this.httpService
       .post(
         `${this.options.authServerUrl}admin/realms/${this.options.realm}/clients/${this.options.clientId}/authz/resource-server/scope`,
-        { name: scope }
+        { name: scope },
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Authorization: `Bearer ${accessToken}`
+          }
+        }
       )
       .toPromise();
   }
+}
+
+export interface GetAccessTokenRes {
+  access_token: string;
+  expires_in?: string;
+  refresh_expires_in?: number;
+  refresh_token: string;
+  token_type?: string;
+  'not-before-policy'?: string;
+  session_state?: string;
+  scope?: string;
 }
