@@ -101,6 +101,6 @@ export class KeycloakModule {
     httpService: HttpService
   ) {
     const register = new Register(options, httpService);
-    await register.setup();
+    //    await register.setup();
   }
 }

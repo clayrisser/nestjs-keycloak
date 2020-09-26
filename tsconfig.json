@@ -13,7 +13,12 @@
     "resolveJsonModule": true,
     "sourceMap": true,
     "strict": true,
-    "target": "es2019"
+    "target": "es2019",
+    "baseUrl": ".",
+    "paths": {
+      "axios": ["node_modules/axios/"],
+      "rxjs": ["node_modules/rxjs/"]
+    }
   },
   "include": ["src", "tests"]
 }

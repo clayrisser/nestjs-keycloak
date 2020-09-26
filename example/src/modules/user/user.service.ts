@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaCrudService } from 'nestjs-crud-prisma';
-import { PrismaService } from 'nestjs-prisma';
-import { User } from '../../generated/type-graphql';
+import { PrismaService } from '../prisma';
+import { User } from '../../generated/typegraphql';
 
 @Injectable()
 export class UserService extends PrismaCrudService<User> {
