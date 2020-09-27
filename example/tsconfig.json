@@ -15,7 +15,13 @@
     "resolveJsonModule": true,
     "sourceMap": true,
     "strict": true,
-    "target": "es2019"
+    "target": "es2019",
+    "baseUrl": ".",
+    "paths": {
+      "@generated/*": ["src/generated/*"],
+      "@modules/*": ["src/modules/*"],
+      "@prisma/client": ["node_modules/@prisma/generated/"]
+    }
   },
   "exclude": ["node_modules", "dist", "graphql"]
 }

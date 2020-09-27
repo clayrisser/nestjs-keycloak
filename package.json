@@ -91,7 +91,6 @@
     "jest-sonar-reporter": "^2.0.0",
     "lockfile-lint": "^4.3.7",
     "majestic": "^1.7.0",
-    "makefiles": "^0.1.1",
     "prettier": "^2.1.2",
     "typescript": "^4.0.3"
   },
