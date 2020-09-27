@@ -5,18 +5,18 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Module, Global, HttpModule } from '@nestjs/common';
 import { NestSessionOptions, SessionModule } from 'nestjs-session';
 import { PassportModule } from '@nestjs/passport';
-import { PrismaService, PrismaModule } from 'nestjs-prisma';
 import { RedisService, RedisModule, RedisModuleOptions } from 'nestjs-redis';
 import { TypeGraphQLModule } from '@codejamninja/typegraphql-nestjs';
 import {
   AuthGuard,
   KeycloakModule,
-  ResourceGuard,
-  TypeGraphqlAuthGuard,
-  TypeGraphqlResourceGuard
+  ResourceGuard
+  // TypeGraphqlAuthGuard,
+  // TypeGraphqlResourceGuard
 } from 'nestjs-keycloak';
 import modules from './modules';
 import { GraphqlCtx } from './types';
+import { PrismaService, PrismaModule } from './modules/prisma';
 
 const RedisStore = ConnectRedis(session);
 

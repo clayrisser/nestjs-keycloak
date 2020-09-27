@@ -1,10 +1,12 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../node_modules/@prisma/generated"
+  binaryTargets = ["native"]
 }
 
 generator typegraphql {
   provider = "../node_modules/typegraphql-prisma/generator.js"
-  output   = "../src/generated/type-graphql"
+  output   = "../src/generated/typegraphql"
 }
 
 datasource db {

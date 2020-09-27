@@ -1,4 +1,4 @@
-include node_modules/makefiles/makefiles.mk
+include ../siliconmake.mk
 
 BABEL := node_modules/.bin/babel
 BABEL_NODE := node_modules/.bin/babel-node
@@ -47,7 +47,7 @@ prepare:
 
 .PHONY: format +format _format ~format
 format: _format ~format
-~format: $(FORMAT_TARGET)
+~format: install $(FORMAT_TARGET)
 #	@$(MAKE) -s -C prisma format
 +format: _format $(FORMAT_TARGET)
 _format:
@@ -86,6 +86,9 @@ _generate:
 	-@rm -rf src/generated $(NOFAIL)
 src/generated/type-graphql/index.ts: $(GENERATE_DEPS)
 	@$(MAKE) -s -C prisma generate
+	@mkdir -p node_modules/.tmp/dist/node_modules/@prisma
+	-@rm -rf node_modules/.tmp/dist/node_modules/@prisma/generated $(NOFAIL)
+	@cp -r node_modules/@prisma/generated node_modules/.tmp/dist/node_modules/@prisma/generated
 
 .PHONY: lint +lint _lint ~lint
 lint: _lint ~lint
@@ -152,7 +155,7 @@ test-watch: ~lint
 	@$(JEST) --watch $(ARGS)
 
 .PHONY: start +start
-start: ~format
+start: ~generate
 	@$(MAKE) -s +start
 +start: seed
 	@$(NODEMON) --watch src -e ts --exec nest start

@@ -1,4 +1,4 @@
-include node_modules/makefiles/makefiles.mk
+include siliconmake.mk
 
 BABEL := node_modules/.bin/babel
 BABEL_NODE := node_modules/.bin/babel-node
@@ -41,7 +41,7 @@ prepare:
 
 .PHONY: format +format _format ~format
 format: _format ~format
-~format: $(FORMAT_TARGET)
+~format: install $(FORMAT_TARGET)
 +format: _format $(FORMAT_TARGET)
 _format:
 	-@rm -rf $(DONE)/_format $(NOFAIL)
@@ -116,7 +116,6 @@ lib:
 	@$(BABEL) src -d lib --extensions '.ts,.tsx' --source-maps
 	@$(TSC) -d --emitDeclarationOnly
 	@cp -r node_modules/.tmp/lib/src/. lib $(NOFAIL)
-	-@rm -rf example/node_modules/nestjs-keycloak/lib && cp -r lib example/node_modules/nestjs-keycloak/lib
 
 .PHONY: coverage
 coverage: ~lint
