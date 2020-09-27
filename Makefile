@@ -1,4 +1,4 @@
-include siliconmake.mk
+include silicon.mk
 
 BABEL := node_modules/.bin/babel
 BABEL_NODE := node_modules/.bin/babel-node

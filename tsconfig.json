@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "allowJs": true,
+    "baseUrl": ".",
     "declaration": true,
     "emitDecoratorMetadata": true,
     "esModuleInterop": true,
@@ -14,7 +15,6 @@
     "sourceMap": true,
     "strict": true,
     "target": "es2019",
-    "baseUrl": ".",
     "paths": {
       "axios": ["node_modules/axios/"],
       "rxjs": ["node_modules/rxjs/"]
