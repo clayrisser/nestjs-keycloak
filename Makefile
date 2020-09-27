@@ -136,10 +136,10 @@ test-watch: ~lint
 	@$(JEST) --watch $(ARGS)
 
 .PHONY: start +start
-start: ~format
+start: ~build
 	@$(MAKE) -s +start
 +start:
-	@cd example && $(NPM) run start
+	@$(MAKE) -s -C example start
 
 .PHONY: clean
 clean:
