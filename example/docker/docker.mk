@@ -10,6 +10,15 @@ all: build
 .PHONY: build
 build:
 	@docker-compose -f docker-build.yaml build $(ARGS)
+	@$(MAKE) -s +tag
+
+.PHONY: tag
+tag:
+	@$(MAKE) -s +tag
++tag:
+	@docker tag ${IMAGE}:latest ${IMAGE}:${MAJOR}
+	@docker tag ${IMAGE}:latest ${IMAGE}:${MAJOR}.${MINOR}
+	@docker tag ${IMAGE}:latest ${IMAGE}:${MAJOR}.${MINOR}.${PATCH}
 
 .PHONY: pull
 pull:

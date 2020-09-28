@@ -17,6 +17,16 @@
     "babel-plugin-transform-typescript-metadata",
     ["@babel/plugin-proposal-decorators", { "legacy": true }],
     ["@babel/plugin-proposal-class-properties", { "loose": true }],
-    "@babel/plugin-transform-runtime"
+    "@babel/plugin-transform-runtime",
+    [
+      "module-resolver",
+      {
+        "root": ["./"],
+        "alias": {
+          "@generated": "./src/generated",
+          "@prisma/client": "@prisma/generated"
+        }
+      }
+    ]
   ]
 }
