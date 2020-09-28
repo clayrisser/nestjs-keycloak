@@ -1,5 +1,8 @@
 import { HttpService } from '@nestjs/common';
+import KcAdminClient from 'keycloak-admin';
 import { KeycloakOptions } from './types';
+
+const kcAdminClient = new KcAdminClient();
 
 export default class Register {
   constructor(
@@ -16,6 +19,12 @@ export default class Register {
         resource2: ['scope2', 'scope3', 'scope4']
       }
     };
+    await kcAdminClient.auth({
+      username: 'admin',
+      password: 'pass',
+      grantType: 'password',
+      clientId: 'admin-cli'
+    });
     this.enableAuthorization();
     // Get and Create Roles
     // Get response [{"id":"f07f81d9-3621-42b6-b293-81a8bd50c70d","name":"test","composite":false,"clientRole":true,"containerId":"cb11fd17-46df-419a-9c67-4a69d1be66ae"}]
@@ -37,12 +46,22 @@ export default class Register {
         }
       });
     });
+
+    const scopes: any = await this.getScopes();
     // Create Scopes
     // [{"id":"255c02ed-f9d5-4d5a-bd40-6c298ec44df5","name":"test-auth-scope"}]
-    console.log(this.options, this.httpService);
+    console.log('options', this.options, this.httpService);
   }
 
   async enableAuthorization() {
+    // const clientId = this.options.clientId;
+    // await kcAdminClient.clients.update(
+    //   { id: clientUniqueId },
+    //   {
+    //     // clientId is required in client update. no idea why...
+    //     clientId
+    //   }
+    // );
     return this.httpService
       .put(
         `${this.options.authServerUrl}/admin/realms/${this.options.realm}/clients/${this.options.clientId}`,
@@ -55,9 +74,13 @@ export default class Register {
   }
 
   async getRoles() {
-    return this.httpService.get<Array<string>>(
-      `${this.options.authServerUrl}admin/${this.options.realm}/clients/${this.options.clientId}/roles`
-    );
+    const roles = await kcAdminClient.clients.listRoles({
+      id: this.options.clientId || ''
+    });
+    return roles;
+    // return this.httpService.get<Array<string>>(
+    //   `${this.options.authServerUrl}admin/${this.options.realm}/clients/${this.options.clientId}/roles`
+    // );
   }
 
   async createRoles(role: string) {
@@ -120,19 +143,25 @@ export default class Register {
   }
 
   async getScopes() {
-    return this.httpService
-      .get(
-        `${this.options.authServerUrl}admin/realms/${this.options.realm}/clients/${this.options.clientId}/authz/resource-server/scope`
-      )
-      .toPromise();
+    const scopes = await kcAdminClient.clientScopes.find();
+    return scopes;
+    // return this.httpService
+    //   .get(
+    //     `${this.options.authServerUrl}admin/realms/${this.options.realm}/clients/${this.options.clientId}/authz/resource-server/scope`
+    //   )
+    //   .toPromise();
   }
 
   async createScope(scope: string) {
-    return this.httpService
-      .post(
-        `${this.options.authServerUrl}admin/realms/${this.options.realm}/clients/${this.options.clientId}/authz/resource-server/scope`,
-        { name: scope }
-      )
-      .toPromise();
+    await kcAdminClient.clientScopes.create({
+      name: scope
+    });
+
+    // return this.httpService
+    //   .post(
+    //     `${this.options.authServerUrl}admin/realms/${this.options.realm}/clients/${this.options.clientId}/authz/resource-server/scope`,
+    //     { name: scope }
+    //   )
+    //   .toPromise();
   }
 }
