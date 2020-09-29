@@ -14,9 +14,9 @@ import {
   // TypeGraphqlAuthGuard,
   // TypeGraphqlResourceGuard
 } from 'nestjs-keycloak';
+import { PrismaService, PrismaModule } from '~/modules/prisma';
 import modules from './modules';
 import { GraphqlCtx } from './types';
-import { PrismaService, PrismaModule } from './modules/prisma';
 
 const RedisStore = ConnectRedis(session);
 

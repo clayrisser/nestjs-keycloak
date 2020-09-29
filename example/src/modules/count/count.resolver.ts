@@ -1,6 +1,6 @@
 import { Resolver, Query, Ctx } from 'type-graphql';
 // import { Roles } from 'nestjs-keycloak';
-import { GraphqlCtx } from '../../types';
+import { GraphqlCtx } from '~/types';
 
 @Resolver()
 export class CountResolver {

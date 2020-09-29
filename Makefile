@@ -143,7 +143,7 @@ start: ~build
 
 .PHONY: clean
 clean:
-	-@$(JEST) --clearCache
+	-@$(MAKE) -s -C example clean
 ifeq ($(PLATFORM), win32)
 	-@$(GIT) clean -fXd \
 		-e !/node_modules \

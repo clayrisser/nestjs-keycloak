@@ -18,10 +18,9 @@
     "target": "es2019",
     "baseUrl": ".",
     "paths": {
-      "@generated/*": ["src/generated/*"],
-      "@modules/*": ["src/modules/*"],
-      "@prisma/client": ["node_modules/@prisma/generated/"]
+      "@prisma/client": ["node_modules/@prisma/generated/"],
+      "~/*": ["src/*"]
     }
   },
-  "exclude": ["node_modules", "dist", "graphql"]
+  "include": ["./src", "./prisma", "./tests", "./node_modules/nestjs-prisma"]
 }
