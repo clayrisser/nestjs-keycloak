@@ -19,9 +19,9 @@
     "url": "https://codejam.ninja"
   },
   "files": [
-    "lib"
+    "dist"
   ],
-  "main": "lib/index.js",
+  "main": "dist/index.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/codejamninja/nestjs-example"
