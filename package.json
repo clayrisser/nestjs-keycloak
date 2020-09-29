@@ -1,6 +1,6 @@
 {
   "name": "nestjs-keycloak",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "crud for restful apis built with nestjs and prisma",
   "keywords": [
     "nestjs-keycloak",
