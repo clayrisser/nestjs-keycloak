@@ -30,10 +30,15 @@ TEST_TARGET := $(TEST_DEPS) $(DONE)/test
 .PHONY: all
 all: build
 
-.PHONY: install
-install: node_modules
-node_modules: package.json
+.PHONY: install +install _install ~install
+install: _install ~install
+~install: $(DONE)/install
++install: _install $(DONE)/install
+_install:
+	-@rm -rf $(DONE)/install $(NOFAIL)
+$(DONE)/install: package.json
 	@$(NPM) install
+	@$(call done,install)
 
 .PHONY: prepare
 prepare:
@@ -41,7 +46,7 @@ prepare:
 
 .PHONY: format +format _format ~format
 format: _format ~format
-~format: install $(FORMAT_TARGET)
+~format: ~install $(FORMAT_TARGET)
 +format: _format $(FORMAT_TARGET)
 _format:
 	-@rm -rf $(DONE)/_format $(NOFAIL)
