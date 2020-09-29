@@ -1,5 +1,6 @@
 import { HttpService } from '@nestjs/common';
 import KcAdminClient from 'keycloak-admin';
+import _ from 'lodash';
 import { KeycloakOptions } from './types';
 
 const kcAdminClient = new KcAdminClient();
@@ -12,6 +13,7 @@ export default class Register {
 
   async setup() {
     // REGISTER HERE
+    console.log(this.options, this.httpService);
     const data = {
       roles: ['role1', 'role2', 'role3'],
       resources: {
@@ -25,73 +27,66 @@ export default class Register {
       grantType: 'password',
       clientId: 'admin-cli'
     });
-    this.enableAuthorization();
+    kcAdminClient.setConfig({
+      realmName: this.options.realm
+    });
+    // Enable Authorization service
+    await this.enableAuthorization();
     // Get and Create Roles
-    // Get response [{"id":"f07f81d9-3621-42b6-b293-81a8bd50c70d","name":"test","composite":false,"clientRole":true,"containerId":"cb11fd17-46df-419a-9c67-4a69d1be66ae"}]
     const roles: any = await this.getRoles();
-    data.roles.forEach((role) => {
-      roles.forEach((existingRole: any) => {
-        if (existingRole.name !== role) {
-          this.createRoles(role);
-        }
-      });
+    console.log(roles);
+    const rolesToCreate = _.difference(data.roles, roles);
+    console.log(rolesToCreate);
+    rolesToCreate.forEach((role) => {
+      this.createRoles(role);
     });
-    // Create Resources
-    // [{"name":"Default Resource","type":"urn:nestjs-keycloak-example:resources:default","owner":{"id":"cb11fd17-46df-419a-9c67-4a69d1be66ae","name":"nestjs-keycloak-example"},"ownerManagedAccess":false,"_id":"8c75b071-c7a3-43e8-b84d-dae1fd0ce284","uris":["/*"]},{"name":"test resource","owner":{"id":"cb11fd17-46df-419a-9c67-4a69d1be66ae","name":"nestjs-keycloak-example"},"ownerManagedAccess":false,"_id":"45adc2e6-c5b8-40c3-87b2-90761ec2c27e","uris":[]}]
-    const resources: any = await this.getResources();
-    Object.keys(data.resources).forEach((resource) => {
-      resources.forEach((existingResource: any) => {
-        if (existingResource.name !== resource) {
-          this.createResource(resource);
-        }
-      });
-    });
+    // // Create Resources
+    // // [{"name":"Default Resource","type":"urn:nestjs-keycloak-example:resources:default","owner":{"id":"cb11fd17-46df-419a-9c67-4a69d1be66ae","name":"nestjs-keycloak-example"},"ownerManagedAccess":false,"_id":"8c75b071-c7a3-43e8-b84d-dae1fd0ce284","uris":["/*"]},{"name":"test resource","owner":{"id":"cb11fd17-46df-419a-9c67-4a69d1be66ae","name":"nestjs-keycloak-example"},"ownerManagedAccess":false,"_id":"45adc2e6-c5b8-40c3-87b2-90761ec2c27e","uris":[]}]
+    // const resources: any = await this.getResources();
+    // Object.keys(data.resources).forEach((resource) => {
+    //   resources.forEach((existingResource: any) => {
+    //     if (existingResource.name !== resource) {
+    //       this.createResource(resource);
+    //     }
+    //   });
+    // });
 
-    const scopes: any = await this.getScopes();
-    // Create Scopes
-    // [{"id":"255c02ed-f9d5-4d5a-bd40-6c298ec44df5","name":"test-auth-scope"}]
-    console.log('options', this.options, this.httpService);
+    // // const scopes: any = await this.getScopes();
+    // // Create Scopes
+    // // [{"id":"255c02ed-f9d5-4d5a-bd40-6c298ec44df5","name":"test-auth-scope"}]
   }
 
   async enableAuthorization() {
-    // const clientId = this.options.clientId;
-    // await kcAdminClient.clients.update(
-    //   { id: clientUniqueId },
-    //   {
-    //     // clientId is required in client update. no idea why...
-    //     clientId
-    //   }
-    // );
-    return this.httpService
-      .put(
-        `${this.options.authServerUrl}/admin/realms/${this.options.realm}/clients/${this.options.clientId}`,
+    await kcAdminClient.clients
+      .update(
+        { id: this.options.clientUniqueId || '' },
         {
+          clientId: this.options.clientId,
           authorizationServicesEnabled: true,
           serviceAccountsEnabled: true
         }
       )
-      .toPromise();
+      .catch((e) => {
+        return e;
+      });
   }
 
   async getRoles() {
-    const roles = await kcAdminClient.clients.listRoles({
-      id: this.options.clientId || ''
-    });
-    return roles;
-    // return this.httpService.get<Array<string>>(
-    //   `${this.options.authServerUrl}admin/${this.options.realm}/clients/${this.options.clientId}/roles`
-    // );
+    const roles = await kcAdminClient.clients
+      .listRoles({
+        id: this.options.clientUniqueId || ''
+      })
+      .catch((e) => {
+        return e;
+      });
+    return _.map(roles, 'name');
   }
 
   async createRoles(role: string) {
-    return this.httpService
-      .post(
-        `${this.options.authServerUrl}admin/${this.options.realm}/clients/${this.options.clientId}/roles`,
-        {
-          name: role
-        }
-      )
-      .toPromise();
+    return kcAdminClient.clients.createRole({
+      id: this.options.clientUniqueId,
+      name: role
+    });
   }
 
   async getResources() {
