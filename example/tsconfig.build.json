@@ -1,11 +1,4 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": [
-    "**/*spec.ts",
-    "dist",
-    "graphql",
-    "node_modules",
-    "prisma",
-    "test"
-  ]
+  "include": ["./src"]
 }

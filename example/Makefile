@@ -12,6 +12,9 @@ PRETTIER := node_modules/.bin/prettier
 TSC := node_modules/.bin/tsc
 COLLECT_COVERAGE_FROM := ["src/**/*.{js,jsx,ts,tsx}"]
 
+INSTALL_DEPS := package.json
+INSTALL_TARGET := $(INSTALL_DEPS) $(DONE)/install
+
 BUILD_DEPS := $(patsubst src/%.ts,dist/%.d.ts,$(shell find src -name '*.ts' -not -name '*.d.ts')) \
 	$(patsubst src/%.tsx,dist/%.d.ts,$(shell find src -name '*.tsx'))
 BUILD_TARGET := $(BUILD_DEPS) dist
@@ -36,10 +39,15 @@ TEST_TARGET := $(TEST_DEPS) $(DONE)/test
 .PHONY: all
 all: build
 
-.PHONY: install
-install: node_modules
-node_modules: package.json
+.PHONY: install +install _install ~install
+install: _install ~install
+~install: $(DONE)/install
++install: _install $(DONE)/install
+_install:
+	-@rm -rf $(DONE)/install $(NOFAIL)
+$(DONE)/install: package.json
 	@$(NPM) install
+	@$(call done,install)
 
 .PHONY: prepare
 prepare:
@@ -47,7 +55,7 @@ prepare:
 
 .PHONY: format +format _format ~format
 format: _format ~format
-~format: install $(FORMAT_TARGET)
+~format: ~install $(FORMAT_TARGET)
 #	@$(MAKE) -s -C prisma format
 +format: _format $(FORMAT_TARGET)
 _format:

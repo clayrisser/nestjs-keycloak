@@ -30,10 +30,15 @@ TEST_TARGET := $(TEST_DEPS) $(DONE)/test
 .PHONY: all
 all: build
 
-.PHONY: install
-install: node_modules
-node_modules: package.json
+.PHONY: install +install _install ~install
+install: _install ~install
+~install: $(DONE)/install
++install: _install $(DONE)/install
+_install:
+	-@rm -rf $(DONE)/install $(NOFAIL)
+$(DONE)/install: package.json
 	@$(NPM) install
+	@$(call done,install)
 
 .PHONY: prepare
 prepare:
@@ -41,11 +46,12 @@ prepare:
 
 .PHONY: format +format _format ~format
 format: _format ~format
-~format: install $(FORMAT_TARGET)
+~format: ~install $(FORMAT_TARGET)
 +format: _format $(FORMAT_TARGET)
 _format:
 	-@rm -rf $(DONE)/_format $(NOFAIL)
 $(DONE)/format:
+	-@$(MAKE) -s -C example format
 	@for i in $$($(call get_deps,format)); do echo $$i | \
 		grep -E "\.[jt]sx?$$"; done | xargs $(ESLINT) --fix >/dev/null ||true
 	@$(PRETTIER) --write $(shell $(call get_deps,format))
@@ -63,6 +69,7 @@ spellcheck: _spellcheck ~spellcheck
 _spellcheck:
 	-@rm -rf $(DONE)/_spellcheck $(NOFAIL)
 $(DONE)/spellcheck:
+	-@$(MAKE) -s -C example spellcheck
 	-@$(CSPELL) --config .cspellrc $(shell $(call get_deps,spellcheck))
 	@$(call reset_deps,spellcheck)
 	@$(call done,spellcheck)
@@ -78,6 +85,7 @@ lint: _lint ~lint
 _lint:
 	-@rm -rf $(DONE)/_lint $(NOFAIL)
 $(DONE)/lint:
+	-@$(MAKE) -s -C example lint
 # -@$(LOCKFILE_LINT) --type npm --path package-lock.json --validate-https
 	-@$(ESLINT) -f json -o node_modules/.tmp/eslintReport.json $(shell $(call get_deps,lint)) $(NOFAIL)
 	-@$(ESLINT) $(shell $(call get_deps,lint))
@@ -95,6 +103,7 @@ test: _test ~test
 _test:
 	-@rm -rf $(DONE)/_test $(NOFAIL)
 $(DONE)/test:
+	-@$(MAKE) -s -C example test
 	-@$(JEST) --json --outputFile=node_modules/.tmp/jestTestResults.json --coverage \
 		--coverageDirectory=node_modules/.tmp/coverage --testResultsProcessor=jest-sonar-reporter \
 		--collectCoverageFrom='$(COLLECT_COVERAGE_FROM)' --findRelatedTests $(shell $(call get_deps,test))
@@ -121,6 +130,7 @@ lib:
 coverage: ~lint
 	@$(MAKE) -s +coverage
 +coverage:
+	-@$(MAKE) -s -C example coverage
 	@$(JEST) --coverage --collectCoverageFrom='$(COLLECT_COVERAGE_FROM)' $(ARGS)
 
 .PHONY: test-ui
@@ -141,9 +151,16 @@ start: ~build
 +start:
 	@$(MAKE) -s -C example start
 
+.PHONY: publish
+publish: ~test
+	@$(MAKE) -s +publish
++publish:
+	@$(MAKE) -s +build
+	@$(NPM) publish
+
 .PHONY: clean
 clean:
-	-@$(JEST) --clearCache
+	-@$(MAKE) -s -C example clean
 ifeq ($(PLATFORM), win32)
 	-@$(GIT) clean -fXd \
 		-e !/node_modules \

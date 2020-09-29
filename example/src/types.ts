@@ -1,5 +1,5 @@
 import { Request } from 'express';
-import { PrismaService } from './modules/prisma';
+import { PrismaService } from '~/modules/prisma';
 
 export enum Adapter {
   Express = 'express',

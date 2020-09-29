@@ -1,7 +1,7 @@
 import { Controller, Get, Session, Render, Req } from '@nestjs/common';
+import { Public, Resource /* , Roles */ } from 'nestjs-keycloak';
 import { Request } from 'express';
-import { Public, Resource, Roles } from 'nestjs-keycloak';
-import { SessionData } from '../../types';
+import { SessionData } from '~/types';
 
 @Controller()
 @Resource('app')

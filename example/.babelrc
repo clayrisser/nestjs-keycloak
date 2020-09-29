@@ -23,8 +23,8 @@
       {
         "root": ["./"],
         "alias": {
-          "@generated": "./src/generated",
-          "@prisma/client": "@prisma/generated"
+          "@prisma/client": "@prisma/generated",
+          "~": "./src"
         }
       }
     ]
