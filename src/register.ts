@@ -1,6 +1,7 @@
 import { HttpService } from '@nestjs/common';
 import KcAdminClient from 'keycloak-admin';
 import _ from 'lodash';
+import qs from 'qs';
 import { KeycloakOptions } from './types';
 
 const kcAdminClient = new KcAdminClient();
@@ -42,18 +43,18 @@ export default class Register {
     });
     // // Create Resources
     // // [{"name":"Default Resource","type":"urn:nestjs-keycloak-example:resources:default","owner":{"id":"cb11fd17-46df-419a-9c67-4a69d1be66ae","name":"nestjs-keycloak-example"},"ownerManagedAccess":false,"_id":"8c75b071-c7a3-43e8-b84d-dae1fd0ce284","uris":["/*"]},{"name":"test resource","owner":{"id":"cb11fd17-46df-419a-9c67-4a69d1be66ae","name":"nestjs-keycloak-example"},"ownerManagedAccess":false,"_id":"45adc2e6-c5b8-40c3-87b2-90761ec2c27e","uris":[]}]
-    // const resources: any = await this.getResources();
-    // Object.keys(data.resources).forEach((resource) => {
-    //   resources.forEach((existingResource: any) => {
-    //     if (existingResource.name !== resource) {
-    //       this.createResource(resource);
-    //     }
-    //   });
-    // });
-
-    // // const scopes: any = await this.getScopes();
+    const resources = await this.getResources();
+    console.log(resources);
+    const resourceToCreate = _.difference(
+      Object.keys(data.resources),
+      resources
+    );
+    resourceToCreate.forEach((resource) => {
+      this.createResource(resource);
+    });
     // // Create Scopes
     // // [{"id":"255c02ed-f9d5-4d5a-bd40-6c298ec44df5","name":"test-auth-scope"}]
+    // // const scopes: any = await this.getScopes();
   }
 
   async enableAuthorization() {
@@ -72,7 +73,7 @@ export default class Register {
   }
 
   async getRoles() {
-    const roles = await kcAdminClient.clients
+    const roles: [Role] = await kcAdminClient.clients
       .listRoles({
         id: this.options.clientUniqueId || ''
       })
@@ -90,22 +91,35 @@ export default class Register {
   }
 
   async getResources() {
-    return this.httpService.get(
-      `${this.options.authServerUrl}admin/realms/${this.options.realm}/clients/${this.options.clientId}/authz/resource-server/resource`
-    );
+    const resourcesRes = await this.httpService
+      .get<[Resource]>(
+        `${this.options.authServerUrl}/admin/realms/${this.options.realm}/clients/${this.options.clientUniqueId}/authz/resource-server/resource`,
+        {
+          headers: {
+            Authorization: `Bearer ${kcAdminClient.getAccessToken()}`
+          }
+        }
+      )
+      .toPromise();
+    return _.map(resourcesRes.data, 'name');
   }
 
   async createResource(resourceName: string) {
     return this.httpService
       .post(
-        `${this.options.authServerUrl}admin/realms/${this.options.realm}/clients/${this.options.clientId}/authz/resource-server/resource`,
-        {
+        `${this.options.authServerUrl}/admin/realms/${this.options.realm}/clients/${this.options.clientId}/authz/resource-server/resource`,
+        qs.stringify({
           attributes: {},
           displayName: resourceName,
           name: resourceName,
           ownerManagedAccess: '',
           scopes: [],
           uris: []
+        }),
+        {
+          headers: {
+            Authorization: `Bearer ${kcAdminClient.getAccessToken()}`
+          }
         }
       )
       .toPromise();
@@ -119,8 +133,8 @@ export default class Register {
   ) {
     return this.httpService
       .put(
-        `${this.options.authServerUrl}admin/realms/${this.options.realm}/clients/${this.options.clientId}/authz/resource-server/resource/${resourceId}`,
-        {
+        `${this.options.authServerUrl}/admin/realms/${this.options.realm}/clients/${this.options.clientId}/authz/resource-server/resource/${resourceId}`,
+        qs.stringify({
           attributes: {},
           displayName: resourceName,
           name: resourceName,
@@ -132,6 +146,11 @@ export default class Register {
           scopes: [{ id: scopeId, name: scopeName }],
           uris: [],
           _id: resourceId
+        }),
+        {
+          headers: {
+            Authorization: `Bearer ${kcAdminClient.getAccessToken()}`
+          }
         }
       )
       .toPromise();
@@ -159,4 +178,25 @@ export default class Register {
     //   )
     //   .toPromise();
   }
+}
+
+export interface Role {
+  clientRole: boolean;
+  composite: boolean;
+  containerId: string;
+  id: string;
+  name: string;
+}
+export interface Resource {
+  name: string;
+  owner: Resource;
+  ownerManagedAccess: boolean;
+  type: string;
+  uris: [string];
+  id: string;
+}
+
+export interface ResourceOwner {
+  id: string;
+  name: string;
 }
