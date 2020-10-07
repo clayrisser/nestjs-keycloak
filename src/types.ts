@@ -32,5 +32,7 @@ export interface KeycloakOptions {
   realm?: string;
   realmPublicKey?: string;
   secret?: string;
-  clientUniqueId?: string;
+  clientUniqueId: string;
+  adminUser: string;
+  adminPass: string;
 }

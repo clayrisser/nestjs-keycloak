@@ -15,46 +15,76 @@ export default class Register {
   async setup() {
     // REGISTER HERE
     console.log(this.options, this.httpService);
-    const data = {
+    const data: Data = {
       roles: ['role1', 'role2', 'role3'],
       resources: {
         resource1: ['scope1', 'scope2', 'scope3'],
-        resource2: ['scope2', 'scope3', 'scope4']
+        resource2: ['scope3', 'scope5', 'scope6']
       }
     };
     await kcAdminClient.auth({
-      username: 'admin',
-      password: 'pass',
+      username: this.options.adminUser,
+      password: this.options.adminPass,
       grantType: 'password',
       clientId: 'admin-cli'
     });
+
     kcAdminClient.setConfig({
       realmName: this.options.realm
     });
+
     // Enable Authorization service
     await this.enableAuthorization();
     // Get and Create Roles
     const roles: any = await this.getRoles();
-    console.log(roles);
+    // console.log(roles);
     const rolesToCreate = _.difference(data.roles, roles);
-    console.log(rolesToCreate);
+    // console.log(rolesToCreate);
     rolesToCreate.forEach((role) => {
       this.createRoles(role);
     });
+
     // // Create Resources
-    // // [{"name":"Default Resource","type":"urn:nestjs-keycloak-example:resources:default","owner":{"id":"cb11fd17-46df-419a-9c67-4a69d1be66ae","name":"nestjs-keycloak-example"},"ownerManagedAccess":false,"_id":"8c75b071-c7a3-43e8-b84d-dae1fd0ce284","uris":["/*"]},{"name":"test resource","owner":{"id":"cb11fd17-46df-419a-9c67-4a69d1be66ae","name":"nestjs-keycloak-example"},"ownerManagedAccess":false,"_id":"45adc2e6-c5b8-40c3-87b2-90761ec2c27e","uris":[]}]
-    const resources = await this.getResources();
-    console.log(resources);
+    const getResourcesRes = await this.getResources();
+    const resources = _.map(getResourcesRes, 'name');
+    // console.log(resources);
     const resourceToCreate = _.difference(
       Object.keys(data.resources),
       resources
     );
-    resourceToCreate.forEach((resource) => {
-      this.createResource(resource);
+    // const resourceToUpdate = _.intersection(
+    //   Object.keys(data.resources),
+    //   resources
+    // );
+    // console.log(resourceToCreate);
+    resourceToCreate.forEach(async (resource: string) => {
+      const scopes: Array<string> = data.resources[resource];
+      const createdScopes = await this.scopeOperations(scopes);
+      await this.createResource(resource, createdScopes);
     });
+  }
+
+  async scopeOperations(scopes: Array<string>) {
     // // Create Scopes
     // // [{"id":"255c02ed-f9d5-4d5a-bd40-6c298ec44df5","name":"test-auth-scope"}]
-    // // const scopes: any = await this.getScopes();
+    const createdScopes: Array<Scope> = [];
+    const getScopesRes = await this.getScopes();
+    const existingScopes = _.map(getScopesRes.data, 'name');
+    const scopesToCreate = _.difference(scopes, existingScopes);
+    const scopesToLink = _.intersection(scopes, existingScopes);
+    if (scopesToLink.length) {
+      const scopeInfo = _.filter(getScopesRes.data, (scope) => {
+        return _.includes(existingScopes, scope.name);
+      });
+      createdScopes.concat(scopeInfo);
+    }
+    console.log('scopes to create and link', scopesToCreate);
+    console.log('scopes to just link', scopesToLink);
+    scopesToCreate.forEach(async (resource) => {
+      const res: Scope | {} = (await this.createScope(resource)).data;
+      if ('id' in res) createdScopes.push(res);
+    });
+    return createdScopes;
   }
 
   async enableAuthorization() {
@@ -80,6 +110,7 @@ export default class Register {
       .catch((e) => {
         return e;
       });
+    console.log('roles in getRoles', roles);
     return _.map(roles, 'name');
   }
 
@@ -90,60 +121,97 @@ export default class Register {
     });
   }
 
+  async getAccessToken() {
+    return this.httpService
+      .post(
+        `${this.options.authServerUrl}/realms/master/protocol/openid-connect/token`,
+        qs.stringify({
+          client_id: 'admin-cli',
+          grant_type: 'password',
+          username: 'admin',
+          password: 'pass'
+        }),
+        {
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        }
+      )
+      .toPromise();
+  }
+
   async getResources() {
     const resourcesRes = await this.httpService
       .get<[Resource]>(
         `${this.options.authServerUrl}/admin/realms/${this.options.realm}/clients/${this.options.clientUniqueId}/authz/resource-server/resource`,
         {
           headers: {
-            Authorization: `Bearer ${kcAdminClient.getAccessToken()}`
+            // Authorization: `Bearer ${kcAdminClient.getAccessToken()}`
+            Authorization: `Bearer ${
+              (await this.getAccessToken()).data.access_token
+            }`
           }
         }
       )
-      .toPromise();
-    return _.map(resourcesRes.data, 'name');
+      .toPromise()
+      .catch((e) => {
+        console.log('get resources failed', e);
+        return { data: [] };
+      });
+    console.log('roles in getResources', resourcesRes.data);
+    // return _.map(resourcesRes.data, 'name');
+    return resourcesRes.data;
   }
 
-  async createResource(resourceName: string) {
+  async createResource(resourceName: string, scopes: Array<Scope> | [] = []) {
+    console.log(
+      `${this.options.authServerUrl}/admin/realms/${this.options.realm}/clients/${this.options.clientUniqueId}/authz/resource-server/resource`
+    );
+    console.log(`Bearer ${(await this.getAccessToken()).data.access_token}`);
     return this.httpService
       .post(
-        `${this.options.authServerUrl}/admin/realms/${this.options.realm}/clients/${this.options.clientId}/authz/resource-server/resource`,
-        qs.stringify({
+        `${this.options.authServerUrl}/admin/realms/${this.options.realm}/clients/${this.options.clientUniqueId}/authz/resource-server/resource`,
+        {
           attributes: {},
           displayName: resourceName,
           name: resourceName,
           ownerManagedAccess: '',
-          scopes: [],
+          scopes,
           uris: []
-        }),
+        },
         {
           headers: {
-            Authorization: `Bearer ${kcAdminClient.getAccessToken()}`
+            // Authorization: `Bearer ${kcAdminClient.getAccessToken()}`
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${
+              (await this.getAccessToken()).data.access_token
+            }`
           }
         }
       )
-      .toPromise();
+      .toPromise()
+      .catch((e) => {
+        console.log('create resources failed', e);
+        return { data: {} };
+      });
   }
 
   updateResource(
     resourceName: string,
     resourceId: string,
-    scopeId: string,
-    scopeName: string
+    scopes: Array<Scope> | [] = []
   ) {
     return this.httpService
       .put(
-        `${this.options.authServerUrl}/admin/realms/${this.options.realm}/clients/${this.options.clientId}/authz/resource-server/resource/${resourceId}`,
+        `${this.options.authServerUrl}/admin/realms/${this.options.realm}/clients/${this.options.clientUniqueId}/authz/resource-server/resource/${resourceId}`,
         qs.stringify({
           attributes: {},
           displayName: resourceName,
           name: resourceName,
           owner: {
-            id: this.options.clientId, // client ID
+            id: this.options.clientUniqueId, // client ID
             name: this.options.realm
           },
           ownerManagedAccess: false,
-          scopes: [{ id: scopeId, name: scopeName }],
+          scopes,
           uris: [],
           _id: resourceId
         }),
@@ -157,26 +225,45 @@ export default class Register {
   }
 
   async getScopes() {
-    const scopes = await kcAdminClient.clientScopes.find();
+    const scopes = await this.httpService
+      .get<Array<Scope>>(
+        `${this.options.authServerUrl}/admin/realms/${this.options.realm}/clients/${this.options.clientUniqueId}/authz/resource-server/scope`,
+        {
+          headers: {
+            Authorization: `Bearer ${
+              (await this.getAccessToken()).data.access_token
+            }`
+          }
+        }
+      )
+      .toPromise()
+      .catch((e) => {
+        console.log('get scopes failed', e);
+        return { data: [] };
+      });
+    console.log('roles in getscopes', scopes.data);
+    // return _.map(scopes.data, 'name');
     return scopes;
-    // return this.httpService
-    //   .get(
-    //     `${this.options.authServerUrl}admin/realms/${this.options.realm}/clients/${this.options.clientId}/authz/resource-server/scope`
-    //   )
-    //   .toPromise();
   }
 
   async createScope(scope: string) {
-    await kcAdminClient.clientScopes.create({
-      name: scope
-    });
-
-    // return this.httpService
-    //   .post(
-    //     `${this.options.authServerUrl}admin/realms/${this.options.realm}/clients/${this.options.clientId}/authz/resource-server/scope`,
-    //     { name: scope }
-    //   )
-    //   .toPromise();
+    return this.httpService
+      .post<Scope>(
+        `${this.options.authServerUrl}/admin/realms/${this.options.realm}/clients/${this.options.clientUniqueId}/authz/resource-server/scope`,
+        { name: scope },
+        {
+          headers: {
+            Authorization: `Bearer ${
+              (await this.getAccessToken()).data.access_token
+            }`
+          }
+        }
+      )
+      .toPromise()
+      .catch((e) => {
+        console.log('create scopes failed', e);
+        return { data: {} };
+      });
   }
 }
 
@@ -199,4 +286,18 @@ export interface Resource {
 export interface ResourceOwner {
   id: string;
   name: string;
+}
+
+export interface Data {
+  roles: Array<string>;
+  resources: DataResources;
+}
+
+export interface DataResources {
+  [key: string]: Array<string>;
+}
+
+export interface Scope {
+  name: string;
+  id: string;
 }

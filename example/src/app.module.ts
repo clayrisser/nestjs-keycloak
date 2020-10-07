@@ -33,7 +33,9 @@ const RedisStore = ConnectRedis(session);
         debug: config.get('DEBUG') === '1',
         realm: config.get('KEYCLOAK_REALM') || '',
         secret: config.get('KEYCLOAK_SECRET') || '',
-        clientUniqueId: config.get('KEYCLOAK_CLIENT_UNIQUE_ID') || ''
+        clientUniqueId: config.get('KEYCLOAK_CLIENT_UNIQUE_ID') || '',
+        adminUser: config.get('KEYCLOAK_ADMIN_USER') || 'admin',
+        adminPass: config.get('KEYCLOAK_ADMIN_PASS') || 'pass'
       })
     }),
     RedisModule.forRootAsync({
