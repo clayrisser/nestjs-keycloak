@@ -35,38 +35,26 @@ export default class Register {
 
     // Enable Authorization service
     await this.enableAuthorization();
-    // Get and Create Roles
-    const roles: any = await this.getRoles();
-    // console.log(roles);
-    const rolesToCreate = _.difference(data.roles, roles);
-    // console.log(rolesToCreate);
+    const getRolesRes: any = await this.getRoles();
+    const roleNames = _.map(getRolesRes, 'name');
+    const rolesToCreate = _.difference(data.roles, roleNames);
     rolesToCreate.forEach((role) => {
       this.createRoles(role);
     });
-
-    // // Create Resources
     const getResourcesRes = await this.getResources();
-    const resources = _.map(getResourcesRes, 'name');
-    // console.log(resources);
+    const resourceNames = _.map(getResourcesRes, 'name');
     const resourceToCreate = _.difference(
       Object.keys(data.resources),
-      resources
+      resourceNames
     );
-    // const resourceToUpdate = _.intersection(
-    //   Object.keys(data.resources),
-    //   resources
-    // );
-    // console.log(resourceToCreate);
     resourceToCreate.forEach(async (resource: string) => {
       const scopes: Array<string> = data.resources[resource];
-      const createdScopes = await this.scopeOperations(scopes);
-      await this.createResource(resource, createdScopes);
+      const scopesToAttach = await this.scopeOperations(scopes);
+      await this.createResource(resource, scopesToAttach);
     });
   }
 
   async scopeOperations(scopes: Array<string>) {
-    // // Create Scopes
-    // // [{"id":"255c02ed-f9d5-4d5a-bd40-6c298ec44df5","name":"test-auth-scope"}]
     const createdScopes: Array<Scope> = [];
     const getScopesRes = await this.getScopes();
     const existingScopes = _.map(getScopesRes.data, 'name');
@@ -78,8 +66,6 @@ export default class Register {
       });
       createdScopes.concat(scopeInfo);
     }
-    console.log('scopes to create and link', scopesToCreate);
-    console.log('scopes to just link', scopesToLink);
     scopesToCreate.forEach(async (resource) => {
       const res: Scope | {} = (await this.createScope(resource)).data;
       if ('id' in res) createdScopes.push(res);
@@ -88,30 +74,20 @@ export default class Register {
   }
 
   async enableAuthorization() {
-    await kcAdminClient.clients
-      .update(
-        { id: this.options.clientUniqueId || '' },
-        {
-          clientId: this.options.clientId,
-          authorizationServicesEnabled: true,
-          serviceAccountsEnabled: true
-        }
-      )
-      .catch((e) => {
-        return e;
-      });
+    await kcAdminClient.clients.update(
+      { id: this.options.clientUniqueId || '' },
+      {
+        clientId: this.options.clientId,
+        authorizationServicesEnabled: true,
+        serviceAccountsEnabled: true
+      }
+    );
   }
 
   async getRoles() {
-    const roles: [Role] = await kcAdminClient.clients
-      .listRoles({
-        id: this.options.clientUniqueId || ''
-      })
-      .catch((e) => {
-        return e;
-      });
-    console.log('roles in getRoles', roles);
-    return _.map(roles, 'name');
+    return kcAdminClient.clients.listRoles({
+      id: this.options.clientUniqueId || ''
+    });
   }
 
   async createRoles(role: string) {
@@ -151,21 +127,11 @@ export default class Register {
           }
         }
       )
-      .toPromise()
-      .catch((e) => {
-        console.log('get resources failed', e);
-        return { data: [] };
-      });
-    console.log('roles in getResources', resourcesRes.data);
-    // return _.map(resourcesRes.data, 'name');
+      .toPromise();
     return resourcesRes.data;
   }
 
   async createResource(resourceName: string, scopes: Array<Scope> | [] = []) {
-    console.log(
-      `${this.options.authServerUrl}/admin/realms/${this.options.realm}/clients/${this.options.clientUniqueId}/authz/resource-server/resource`
-    );
-    console.log(`Bearer ${(await this.getAccessToken()).data.access_token}`);
     return this.httpService
       .post(
         `${this.options.authServerUrl}/admin/realms/${this.options.realm}/clients/${this.options.clientUniqueId}/authz/resource-server/resource`,
@@ -187,11 +153,7 @@ export default class Register {
           }
         }
       )
-      .toPromise()
-      .catch((e) => {
-        console.log('create resources failed', e);
-        return { data: {} };
-      });
+      .toPromise();
   }
 
   updateResource(
@@ -241,8 +203,6 @@ export default class Register {
         console.log('get scopes failed', e);
         return { data: [] };
       });
-    console.log('roles in getscopes', scopes.data);
-    // return _.map(scopes.data, 'name');
     return scopes;
   }
 
@@ -259,11 +219,7 @@ export default class Register {
           }
         }
       )
-      .toPromise()
-      .catch((e) => {
-        console.log('create scopes failed', e);
-        return { data: {} };
-      });
+      .toPromise();
   }
 }
 
