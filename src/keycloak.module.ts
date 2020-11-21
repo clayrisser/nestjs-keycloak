@@ -1,4 +1,5 @@
 import Keycloak from 'keycloak-connect';
+import { DiscoveryModule, DiscoveryService, Reflector } from '@nestjs/core';
 import {
   DynamicModule,
   Module,
@@ -29,10 +30,12 @@ export * from './types';
 
 @Module({})
 export class KeycloakModule {
+  public static imports = [HttpModule, DiscoveryModule];
+
   public static register(options: KeycloakOptions): DynamicModule {
     return {
       module: KeycloakModule,
-      imports: [HttpModule],
+      imports: KeycloakModule.imports,
       providers: [
         KeycloakService,
         this.keycloakProvider,
@@ -51,7 +54,7 @@ export class KeycloakModule {
   ): DynamicModule {
     return {
       module: KeycloakModule,
-      imports: [...(asyncOptions.imports || []), HttpModule],
+      imports: [...(asyncOptions.imports || []), ...KeycloakModule.imports],
       providers: [
         KeycloakService,
         this.createOptionsProvider(asyncOptions),
@@ -65,10 +68,20 @@ export class KeycloakModule {
   private static createKeycloakRegisterProvider() {
     return {
       provide: KEYCLOAK_REGISTER,
-      useFactory(options: KeycloakOptions, httpService: HttpService) {
-        KeycloakModule.setupKeycloak(options, httpService);
+      useFactory(
+        options: KeycloakOptions,
+        httpService: HttpService,
+        discoveryService: DiscoveryService,
+        reflector: Reflector
+      ) {
+        KeycloakModule.setupKeycloak(
+          options,
+          httpService,
+          discoveryService,
+          reflector
+        );
       },
-      inject: [KEYCLOAK_OPTIONS, HttpService]
+      inject: [KEYCLOAK_OPTIONS, HttpService, DiscoveryService, Reflector]
     };
   }
 
@@ -98,9 +111,16 @@ export class KeycloakModule {
 
   static async setupKeycloak(
     options: KeycloakOptions,
-    httpService: HttpService
+    httpService: HttpService,
+    discoveryService: DiscoveryService,
+    reflector: Reflector
   ) {
-    const register = new Register(options, httpService);
+    const register = new Register(
+      options,
+      httpService,
+      discoveryService,
+      reflector
+    );
     await register.setup();
   }
 }

@@ -5,13 +5,13 @@ generator client {
 }
 
 generator typegraphql {
-  provider = "../node_modules/typegraphql-prisma/generator.js"
+  provider = "../node_modules/.bin/typegraphql-prisma"
   output   = "../src/generated/typegraphql"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("POSTGRES_URL")
+  url      = env("GENERATED_POSTGRES_URL")
 }
 
 model User {

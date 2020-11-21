@@ -22,7 +22,7 @@ export class KeycloakService {
 
   async logout(): Promise<null> {
     if (!this.req.session) return null;
-    await new Promise((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       if (!this.req.session?.destroy) return resolve();
       this.req.session?.destroy((err: Error) => {
         if (err) return reject(err);

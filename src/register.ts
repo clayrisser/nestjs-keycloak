@@ -1,7 +1,9 @@
-import { HttpService } from '@nestjs/common';
 import KcAdminClient from 'keycloak-admin';
 import _ from 'lodash';
 import qs from 'qs';
+import { HttpService } from '@nestjs/common';
+import { DiscoveryService, Reflector } from '@nestjs/core';
+import { InstanceWrapper } from '@nestjs/core/injector/instance-wrapper';
 import { KeycloakOptions } from './types';
 
 const kcAdminClient = new KcAdminClient();
@@ -9,10 +11,59 @@ const kcAdminClient = new KcAdminClient();
 export default class Register {
   constructor(
     private readonly options: KeycloakOptions,
-    private httpService: HttpService
+    private httpService: HttpService,
+    private readonly discoveryService: DiscoveryService,
+    private readonly reflector: Reflector
   ) {}
 
+  get roles() {
+    const controllers = this.discoveryService
+      .getControllers()
+      .map((instanceWrapper: InstanceWrapper) => instanceWrapper.instance);
+    return this.getDecoratorValues('roles', controllers);
+  }
+
+  // TODO: attach scope to resource
+  get scope() {
+    const controllers = this.discoveryService
+      .getControllers()
+      .map((instanceWrapper: InstanceWrapper) => instanceWrapper.instance);
+    return this.getDecoratorValues('scope', controllers);
+  }
+
+  getDecoratorValues(metadataKey: string, instances: any[]) {
+    return [
+      ...instances.reduce((roles: Set<string>, instance: any) => {
+        const methods = getMethods(instance);
+        const classValues = this.reflector.get(metadataKey, instance);
+        return new Set([
+          ...roles,
+          ...(typeof classValues === 'undefined'
+            ? []
+            : Array.isArray(classValues)
+            ? classValues
+            : [classValues]),
+          ...methods.reduce(
+            (roles: string[], method: (...args: any[]) => any) => {
+              const methodValues = this.reflector.get(metadataKey, method);
+              return [
+                ...roles,
+                ...(typeof methodValues === 'undefined'
+                  ? []
+                  : Array.isArray(methodValues)
+                  ? methodValues
+                  : [methodValues])
+              ];
+            },
+            []
+          )
+        ]);
+      }, new Set())
+    ];
+  }
+
   async setup() {
+    console.log('ROLES', this.roles);
     // REGISTER HERE
     console.log(this.options, this.httpService);
     const data: Data = {
@@ -256,4 +307,19 @@ export interface DataResources {
 export interface Scope {
   name: string;
   id: string;
+}
+
+function getMethods(obj: any): ((...args: any[]) => any)[] {
+  const propertyNames = new Set<string>();
+  let current = obj;
+  do {
+    Object.getOwnPropertyNames(current).map((propertyName) =>
+      propertyNames.add(propertyName)
+    );
+  } while ((current = Object.getPrototypeOf(current)));
+  return [...propertyNames]
+    .filter((propertyName: string) => typeof obj[propertyName] === 'function')
+    .map((propertyName: string) => obj[propertyName]) as ((
+    ...args: any[]
+  ) => any)[];
 }

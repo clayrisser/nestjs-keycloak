@@ -9,7 +9,9 @@ export class CountResolver {
   count(@Ctx() ctx: GraphqlCtx): number {
     const { session } = ctx.req;
     if (typeof session === 'undefined') return 0;
+    // @ts-ignore
     session.count = ++session.count || 0;
+    // @ts-ignore
     return session.count;
   }
 }
