@@ -3,8 +3,9 @@ import { Public, Resource, Roles, Scopes } from 'nestjs-keycloak';
 import { Request } from 'express';
 import { SessionData } from '~/types';
 
-@Controller()
 @Resource('app')
+@Controller()
+@Roles('hello')
 export class CountController {
   constructor() {}
 

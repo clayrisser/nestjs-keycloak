@@ -37,7 +37,7 @@ export default class Register {
         (roles: Set<string>, controller: InstanceWrapper) => {
           const methods = getMethods(controller.instance);
           const values = this.reflector.getAllAndMerge(ROLES, [
-            controller.instance,
+            controller.metatype,
             ...methods
           ]);
           return new Set([...roles, ...values]);
@@ -47,25 +47,33 @@ export default class Register {
     ];
   }
 
-  get resources() {
-    return this.controllers.reduce(
-      (resources: Resources<Set<string>>, controller: InstanceWrapper) => {
-        const methods = getMethods(controller.instance);
-        methods.forEach((method: (...args: any[]) => any) => {
-          console.log('scopes', this.reflector.get(SCOPES, method));
-        });
-        const resourceName = this.reflector.get(RESOURCE, controller.instance);
-        if (!resourceName) return resources;
-        resources[resourceName] = new Set([
-          ...(resourceName in resources ? resources[resourceName] : []),
-          ...methods.reduce(
-            (scopes: Set<string>, method: (...args: any[]) => any) => {
-              const methodValues = this.reflector.get(SCOPES, method);
-              return new Set([...scopes, ...(methodValues || [])]);
-            },
-            new Set()
-          )
-        ]);
+  get resources(): Resources {
+    return Object.entries(
+      this.controllers.reduce(
+        (resources: Resources<Set<string>>, controller: InstanceWrapper) => {
+          const methods = getMethods(controller.instance);
+          const resourceName = this.reflector.get(
+            RESOURCE,
+            controller.metatype
+          );
+          if (!resourceName) return resources;
+          resources[resourceName] = new Set([
+            ...(resourceName in resources ? resources[resourceName] : []),
+            ...methods.reduce(
+              (scopes: Set<string>, method: (...args: any[]) => any) => {
+                const methodValues = this.reflector.get(SCOPES, method);
+                return new Set([...scopes, ...(methodValues || [])]);
+              },
+              new Set()
+            )
+          ]);
+          return resources;
+        },
+        {}
+      )
+    ).reduce(
+      (resources: Resources, [resourceName, scopes]: [string, Set<string>]) => {
+        resources[resourceName] = [...scopes];
         return resources;
       },
       {}
@@ -73,12 +81,10 @@ export default class Register {
   }
 
   async setup() {
+    console.log('registering keycloak . . .');
     const data: Data = {
       roles: this.roles,
-      resources: {
-        resource1: ['scope1', 'scope2', 'scope3'],
-        resource2: ['scope3', 'scope5', 'scope6']
-      }
+      resources: this.resources
     };
     await kcAdminClient.auth({
       username: this.options.adminUser,
@@ -107,6 +113,7 @@ export default class Register {
       const scopesToAttach = await this.scopeOperations(scopes);
       await this.createResource(resource, scopesToAttach);
     });
+    console.log('registered keycloak:', JSON.stringify(data, null, 2));
   }
 
   async scopeOperations(scopes: Array<string>) {
