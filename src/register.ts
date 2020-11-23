@@ -4,7 +4,10 @@ import qs from 'qs';
 import { HttpService } from '@nestjs/common';
 import { DiscoveryService, Reflector } from '@nestjs/core';
 import { InstanceWrapper } from '@nestjs/core/injector/instance-wrapper';
-import { KeycloakOptions } from './types';
+import { KeycloakOptions, Resources } from './types';
+import { RESOURCE } from './decorators/resource.decorator';
+import { ROLES } from './decorators/roles.decorator';
+import { SCOPES } from './decorators/scopes.decorator';
 
 const kcAdminClient = new KcAdminClient();
 
@@ -14,60 +17,64 @@ export default class Register {
     private httpService: HttpService,
     private readonly discoveryService: DiscoveryService,
     private readonly reflector: Reflector
-  ) {}
+  ) {
+    this.realmUrl = `${this.options.authServerUrl}/admin/realms/${this.options.realm}`;
+  }
+
+  private realmUrl: string;
+
+  private _controllers: any[] | undefined;
+
+  get controllers(): InstanceWrapper[] {
+    if (this._controllers) return this._controllers;
+    this._controllers = this.discoveryService.getControllers();
+    return this._controllers;
+  }
 
   get roles() {
-    const controllers = this.discoveryService
-      .getControllers()
-      .map((instanceWrapper: InstanceWrapper) => instanceWrapper.instance);
-    return this.getDecoratorValues('roles', controllers);
-  }
-
-  // TODO: attach scope to resource
-  get scope() {
-    const controllers = this.discoveryService
-      .getControllers()
-      .map((instanceWrapper: InstanceWrapper) => instanceWrapper.instance);
-    return this.getDecoratorValues('scope', controllers);
-  }
-
-  getDecoratorValues(metadataKey: string, instances: any[]) {
     return [
-      ...instances.reduce((roles: Set<string>, instance: any) => {
-        const methods = getMethods(instance);
-        const classValues = this.reflector.get(metadataKey, instance);
-        return new Set([
-          ...roles,
-          ...(typeof classValues === 'undefined'
-            ? []
-            : Array.isArray(classValues)
-            ? classValues
-            : [classValues]),
-          ...methods.reduce(
-            (roles: string[], method: (...args: any[]) => any) => {
-              const methodValues = this.reflector.get(metadataKey, method);
-              return [
-                ...roles,
-                ...(typeof methodValues === 'undefined'
-                  ? []
-                  : Array.isArray(methodValues)
-                  ? methodValues
-                  : [methodValues])
-              ];
-            },
-            []
-          )
-        ]);
-      }, new Set())
+      ...this.controllers.reduce(
+        (roles: Set<string>, controller: InstanceWrapper) => {
+          const methods = getMethods(controller.instance);
+          const values = this.reflector.getAllAndMerge(ROLES, [
+            controller.instance,
+            ...methods
+          ]);
+          return new Set([...roles, ...values]);
+        },
+        new Set()
+      )
     ];
   }
 
+  get resources() {
+    return this.controllers.reduce(
+      (resources: Resources<Set<string>>, controller: InstanceWrapper) => {
+        const methods = getMethods(controller.instance);
+        methods.forEach((method: (...args: any[]) => any) => {
+          console.log('scopes', this.reflector.get(SCOPES, method));
+        });
+        const resourceName = this.reflector.get(RESOURCE, controller.instance);
+        if (!resourceName) return resources;
+        resources[resourceName] = new Set([
+          ...(resourceName in resources ? resources[resourceName] : []),
+          ...methods.reduce(
+            (scopes: Set<string>, method: (...args: any[]) => any) => {
+              const methodValues = this.reflector.get(SCOPES, method);
+              return new Set([...scopes, ...(methodValues || [])]);
+            },
+            new Set()
+          )
+        ]);
+        return resources;
+      },
+      {}
+    );
+  }
+
   async setup() {
-    console.log('ROLES', this.roles);
-    // REGISTER HERE
-    console.log(this.options, this.httpService);
     const data: Data = {
-      roles: ['role1', 'role2', 'role3'],
+      roles: this.roles,
       resources: {
         resource1: ['scope1', 'scope2', 'scope3'],
         resource2: ['scope3', 'scope5', 'scope6']
@@ -79,12 +86,9 @@ export default class Register {
       grantType: 'password',
       clientId: 'admin-cli'
     });
-
     kcAdminClient.setConfig({
       realmName: this.options.realm
     });
-
-    // Enable Authorization service
     await this.enableAuthorization();
     const getRolesRes: any = await this.getRoles();
     const roleNames = _.map(getRolesRes, 'name');
@@ -168,10 +172,9 @@ export default class Register {
   async getResources() {
     const resourcesRes = await this.httpService
       .get<[Resource]>(
-        `${this.options.authServerUrl}/admin/realms/${this.options.realm}/clients/${this.options.clientUniqueId}/authz/resource-server/resource`,
+        `${this.realmUrl}/clients/${this.options.clientUniqueId}/authz/resource-server/resource`,
         {
           headers: {
-            // Authorization: `Bearer ${kcAdminClient.getAccessToken()}`
             Authorization: `Bearer ${
               (await this.getAccessToken()).data.access_token
             }`
@@ -185,7 +188,7 @@ export default class Register {
   async createResource(resourceName: string, scopes: Array<Scope> | [] = []) {
     return this.httpService
       .post(
-        `${this.options.authServerUrl}/admin/realms/${this.options.realm}/clients/${this.options.clientUniqueId}/authz/resource-server/resource`,
+        `${this.realmUrl}/clients/${this.options.clientUniqueId}/authz/resource-server/resource`,
         {
           attributes: {},
           displayName: resourceName,
@@ -196,7 +199,6 @@ export default class Register {
         },
         {
           headers: {
-            // Authorization: `Bearer ${kcAdminClient.getAccessToken()}`
             'Content-Type': 'application/json',
             Authorization: `Bearer ${
               (await this.getAccessToken()).data.access_token
@@ -214,13 +216,13 @@ export default class Register {
   ) {
     return this.httpService
       .put(
-        `${this.options.authServerUrl}/admin/realms/${this.options.realm}/clients/${this.options.clientUniqueId}/authz/resource-server/resource/${resourceId}`,
+        `${this.realmUrl}/clients/${this.options.clientUniqueId}/authz/resource-server/resource/${resourceId}`,
         qs.stringify({
           attributes: {},
           displayName: resourceName,
           name: resourceName,
           owner: {
-            id: this.options.clientUniqueId, // client ID
+            id: this.options.clientUniqueId,
             name: this.options.realm
           },
           ownerManagedAccess: false,
@@ -240,7 +242,7 @@ export default class Register {
   async getScopes() {
     const scopes = await this.httpService
       .get<Array<Scope>>(
-        `${this.options.authServerUrl}/admin/realms/${this.options.realm}/clients/${this.options.clientUniqueId}/authz/resource-server/scope`,
+        `${this.realmUrl}/clients/${this.options.clientUniqueId}/authz/resource-server/scope`,
         {
           headers: {
             Authorization: `Bearer ${
@@ -249,18 +251,14 @@ export default class Register {
           }
         }
       )
-      .toPromise()
-      .catch((e) => {
-        console.log('get scopes failed', e);
-        return { data: [] };
-      });
+      .toPromise();
     return scopes;
   }
 
   async createScope(scope: string) {
     return this.httpService
       .post<Scope>(
-        `${this.options.authServerUrl}/admin/realms/${this.options.realm}/clients/${this.options.clientUniqueId}/authz/resource-server/scope`,
+        `${this.realmUrl}/clients/${this.options.clientUniqueId}/authz/resource-server/scope`,
         { name: scope },
         {
           headers: {

@@ -9,6 +9,8 @@ import {
   Logger
 } from '@nestjs/common';
 import { KEYCLOAK_INSTANCE } from '../constants';
+import { RESOURCE } from '../decorators/resource.decorator';
+import { SCOPES } from '../decorators/scopes.decorator';
 import { getReq } from '../utils';
 
 declare module 'keycloak-connect' {
@@ -30,9 +32,9 @@ export class ResourceGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const resource = this.reflector.get<string>('resource', context.getClass());
+    const resource = this.reflector.get<string>(RESOURCE, context.getClass());
     const scopes =
-      this.reflector.get<string[]>('scopes', context.getHandler()) || [];
+      this.reflector.get<string[]>(SCOPES, context.getHandler()) || [];
     if (!resource || !scopes.length) return true;
     this.logger.verbose(
       `Protecting resource '${resource}' with scopes: [ ${scopes} ]`

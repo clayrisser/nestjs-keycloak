@@ -1,5 +1,5 @@
 import { Controller, Get, Session, Render, Req } from '@nestjs/common';
-import { Public, Resource, Roles } from 'nestjs-keycloak';
+import { Public, Resource, Roles, Scopes } from 'nestjs-keycloak';
 import { Request } from 'express';
 import { SessionData } from '~/types';
 
@@ -10,6 +10,7 @@ export class CountController {
 
   @Get()
   @Public()
+  @Scopes('hello', 'world')
   @Render('index')
   getRoot() {
     return { message: 'Hello, world!' };

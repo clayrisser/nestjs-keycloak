@@ -36,3 +36,7 @@ export interface KeycloakOptions {
   adminUser: string;
   adminPass: string;
 }
+
+export interface Resources<T = string[]> {
+  [resource: string]: T;
+}
