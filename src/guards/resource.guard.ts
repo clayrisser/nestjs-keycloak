@@ -33,8 +33,11 @@ export class ResourceGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const resource = this.reflector.get<string>(RESOURCE, context.getClass());
-    const scopes =
+    const handlerScopes =
       this.reflector.get<string[]>(SCOPES, context.getHandler()) || [];
+    const classScopes =
+      this.reflector.get<string[]>(SCOPES, context.getClass()) || [];
+    const scopes = [...new Set([...handlerScopes, ...classScopes])];
     if (!resource || !scopes.length) return true;
     this.logger.verbose(
       `Protecting resource '${resource}' with scopes: [ ${scopes} ]`

@@ -28,15 +28,25 @@ export class AuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = getReq(context);
-    const isPublic = !!this.reflector.get<string>(
+    const handlerIsPublic = !!this.reflector.get<string>(
       'public',
       context.getHandler()
     );
+    const classIsPublic = !!this.reflector.get<string>(
+      'public',
+      context.getClass()
+    );
+    const isPublic = handlerIsPublic || classIsPublic;
     if (isPublic) return true;
-    const roles = this.reflector.get<(string | string[])[]>(
+    const handlerRoles = this.reflector.get<(string | string[])[]>(
       'roles',
       context.getHandler()
     );
+    const classRoles = this.reflector.get<(string | string[])[]>(
+      'roles',
+      context.getHandler()
+    );
+    const roles = [...new Set([...handlerRoles.flat(), ...classRoles.flat()])];
     const accessToken = extractJwt(req.headers) || req.session?.token;
     let grant: Grant | null = null;
     if (accessToken?.length) {
