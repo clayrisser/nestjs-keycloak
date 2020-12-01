@@ -44,10 +44,8 @@ export class AuthGuard implements CanActivate {
         context.getHandler()
       ) || [];
     const classRoles =
-      this.reflector.get<(string | string[])[]>(
-        'roles',
-        context.getHandler()
-      ) || [];
+      this.reflector.get<(string | string[])[]>('roles', context.getClass()) ||
+      [];
     const roles = [...new Set([...handlerRoles.flat(), ...classRoles.flat()])];
     const accessToken = extractJwt(req.headers) || req.session?.token;
     let grant: Grant | null = null;
