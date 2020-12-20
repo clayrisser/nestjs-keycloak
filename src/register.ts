@@ -1,8 +1,8 @@
 import KcAdminClient from 'keycloak-admin';
 import _ from 'lodash';
 import qs from 'qs';
-import { HttpService } from '@nestjs/common';
 import { DiscoveryService, Reflector } from '@nestjs/core';
+import { HttpService } from '@nestjs/common';
 import { InstanceWrapper } from '@nestjs/core/injector/instance-wrapper';
 import { KeycloakOptions, Resources } from './types';
 import { RESOURCE } from './decorators/resource.decorator';
@@ -20,6 +20,10 @@ export default class Register {
   ) {
     this.realmUrl = `${this.options.authServerUrl}/admin/realms/${this.options.realm}`;
   }
+
+  private _accessToken?: string;
+
+  private _createdScopes: Set<Scope> = new Set();
 
   private realmUrl: string;
 
@@ -102,36 +106,50 @@ export default class Register {
     rolesToCreate.forEach((role) => {
       this.createRoles(role);
     });
-    const getResourcesRes = await this.getResources();
-    const resourceNames = _.map(getResourcesRes, 'name');
-    const resourceToCreate = _.difference(
-      Object.keys(data.resources),
-      resourceNames
+    const resources = await this.getResources();
+    await Promise.all(
+      Object.keys(data.resources).map(async (resourceName: string) => {
+        const resource = resources.find(
+          (resource: Resource) => resource.name === resourceName
+        );
+        const scopes: Array<string> = data.resources[resourceName];
+        const scopesToAttach = await this.createScopes(scopes);
+        if (
+          !new Set(resources.map((resource: Resource) => resource.name)).has(
+            resourceName
+          )
+        ) {
+          await this.createResource(resourceName, scopesToAttach);
+        } else {
+          await Promise.all(
+            scopesToAttach.map(async (scope: Scope) => {
+              console.log(
+                `check if SCOPE ${scope.name} is registered to RESOURCE ${resource?.name}`
+              );
+            })
+          );
+        }
+      })
     );
-    resourceToCreate.forEach(async (resource: string) => {
-      const scopes: Array<string> = data.resources[resource];
-      const scopesToAttach = await this.scopeOperations(scopes);
-      await this.createResource(resource, scopesToAttach);
-    });
-    console.log('registered keycloak:', JSON.stringify(data, null, 2));
   }
 
-  async scopeOperations(scopes: Array<string>) {
-    const createdScopes: Array<Scope> = [];
-    const getScopesRes = await this.getScopes();
-    const existingScopes = _.map(getScopesRes.data, 'name');
-    const scopesToCreate = _.difference(scopes, existingScopes);
-    const scopesToLink = _.intersection(scopes, existingScopes);
-    if (scopesToLink.length) {
-      const scopeInfo = _.filter(getScopesRes.data, (scope) => {
-        return _.includes(existingScopes, scope.name);
-      });
-      createdScopes.concat(scopeInfo);
-    }
-    scopesToCreate.forEach(async (resource) => {
-      const res: Scope | {} = (await this.createScope(resource)).data;
-      if ('id' in res) createdScopes.push(res);
-    });
+  async createScopes(scopes: Array<string>): Promise<Scope[]> {
+    const scopesRes = await this.getScopes();
+    const createdScopes: Array<Scope> = [
+      ...this._createdScopes,
+      ...scopesRes.data
+    ];
+    const scopesToCreate = _.difference(
+      scopes,
+      createdScopes.map((scope: Scope) => scope.name)
+    );
+    await Promise.all(
+      scopesToCreate.map(async (scopeName: string) => {
+        const scope: Scope | {} = (await this.createScope(scopeName)).data;
+        if ('id' in scope) createdScopes.push(scope);
+      })
+    );
+    this._createdScopes = new Set(createdScopes);
     return createdScopes;
   }
 
@@ -160,20 +178,24 @@ export default class Register {
   }
 
   async getAccessToken() {
-    return this.httpService
-      .post(
-        `${this.options.authServerUrl}/realms/master/protocol/openid-connect/token`,
-        qs.stringify({
-          client_id: 'admin-cli',
-          grant_type: 'password',
-          username: 'admin',
-          password: 'pass'
-        }),
-        {
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-        }
-      )
-      .toPromise();
+    if (this._accessToken) return this._accessToken;
+    this._accessToken = (
+      await this.httpService
+        .post(
+          `${this.options.authServerUrl}/realms/master/protocol/openid-connect/token`,
+          qs.stringify({
+            client_id: 'admin-cli',
+            grant_type: 'password',
+            username: 'admin',
+            password: 'pass'
+          }),
+          {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+          }
+        )
+        .toPromise()
+    ).data.access_token;
+    return this._accessToken;
   }
 
   async getResources() {
@@ -182,9 +204,7 @@ export default class Register {
         `${this.realmUrl}/clients/${this.options.clientUniqueId}/authz/resource-server/resource`,
         {
           headers: {
-            Authorization: `Bearer ${
-              (await this.getAccessToken()).data.access_token
-            }`
+            Authorization: `Bearer ${await this.getAccessToken()}`
           }
         }
       )
@@ -192,7 +212,7 @@ export default class Register {
     return resourcesRes.data;
   }
 
-  async createResource(resourceName: string, scopes: Array<Scope> | [] = []) {
+  async createResource(resourceName: string, scopes: Scope[] = []) {
     return this.httpService
       .post(
         `${this.realmUrl}/clients/${this.options.clientUniqueId}/authz/resource-server/resource`,
@@ -207,9 +227,7 @@ export default class Register {
         {
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${
-              (await this.getAccessToken()).data.access_token
-            }`
+            Authorization: `Bearer ${await this.getAccessToken()}`
           }
         }
       )
@@ -252,9 +270,7 @@ export default class Register {
         `${this.realmUrl}/clients/${this.options.clientUniqueId}/authz/resource-server/scope`,
         {
           headers: {
-            Authorization: `Bearer ${
-              (await this.getAccessToken()).data.access_token
-            }`
+            Authorization: `Bearer ${await this.getAccessToken()}`
           }
         }
       )
@@ -269,9 +285,7 @@ export default class Register {
         { name: scope },
         {
           headers: {
-            Authorization: `Bearer ${
-              (await this.getAccessToken()).data.access_token
-            }`
+            Authorization: `Bearer ${await this.getAccessToken()}`
           }
         }
       )

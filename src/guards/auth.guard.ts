@@ -63,7 +63,7 @@ export class AuthGuard implements CanActivate {
         req.userInfo = await this.getUserInfo(req.grant);
         if (req.session) req.session.userInfo = req.userInfo;
       }
-      if (roles && req.grant) {
+      if (roles.length && req.grant) {
         return roles.some((role) => {
           return Array.isArray(role)
             ? role.every((innerRole) =>
