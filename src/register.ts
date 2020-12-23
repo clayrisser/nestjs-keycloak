@@ -126,6 +126,8 @@ export default class Register {
               console.log(
                 `check if SCOPE ${scope.name} is registered to RESOURCE ${resource?.name}`
               );
+              const resourceById = await this.getResourceById(resource?.id || '')
+              Object.keys(resourceById).map(async (resource : any)=>{ this.updateResource(resource?.name, resource?.id, [scope])})
             })
           );
         }
@@ -234,10 +236,20 @@ export default class Register {
       .toPromise();
   }
 
-  updateResource(
+  async getResourceById(resourceId: string){
+    return this.httpService.get(`${this.realmUrl}/clients/${this.options.clientUniqueId}/authz/resource-server/resource/${resourceId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${kcAdminClient.getAccessToken()}`
+      }
+    }
+    ).toPromise();
+  }
+
+  async updateResource(
     resourceName: string,
     resourceId: string,
-    scopes: Array<Scope> | [] = []
+    scopes: Array<Scope>
   ) {
     return this.httpService
       .put(
