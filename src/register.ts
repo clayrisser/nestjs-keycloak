@@ -113,39 +113,28 @@ export default class Register {
           (resource: Resource) => resource.name === resourceName
         );
         const scopes: Array<string> = data.resources[resourceName];
-        console.log('=====scopes of resource======', resourceName, scopes);
         const scopesToAttach = await this.createScopes(scopes);
         if (
           !new Set(resources.map((resource: Resource) => resource.name)).has(
             resourceName
           )
         ) {
-          console.log(
-            `${resourceName} is creating with scopes`,
-            scopesToAttach
-          );
           await this.createResource(resourceName, scopesToAttach);
         } else {
-          console.log('getResourceById', resource);
           const resourceById = await this.getResourceById(resource?._id || '');
-          console.log('resourceById', resourceById);
           const existingScopes = resourceById.scopes.map((scope: Scope) => {
             return scope.name;
           });
           const scopesNamesToAttach = scopesToAttach.map((scope: Scope) => {
             return scope.name;
           });
-          console.log('existingScopes', existingScopes);
-          console.log('scopesNamesToAttach', scopesNamesToAttach);
           const scopesToCreate: any = _.difference(
-            scopesNamesToAttach,
+            // scopesNamesToAttach,
+            scopes,
             existingScopes
           );
-          console.log('scopesToCreate', scopesToCreate);
-          console.log('scopesToCreate.len', scopesToCreate.length);
           if (scopesToCreate.length > 0) {
             const createdScopes = await this.createScopes(scopesToCreate);
-            console.log('createdScopes', createdScopes);
             // const allScopes = resourceById.scopes.concat(createdScopes);
             this.updateResource(resourceById, createdScopes);
           }
@@ -160,14 +149,10 @@ export default class Register {
       ...this._createdScopes,
       ...scopesRes.data
     ];
-    console.log('createdScopes1', createdScopes);
-    console.log(scopes);
-    console.log(createdScopes.map((scope: Scope) => scope.name));
     const scopesToCreate = _.difference(
       scopes,
       createdScopes.map((scope: Scope) => scope.name)
     );
-    console.log('scopesToCreate', scopesToCreate);
     await Promise.all(
       scopesToCreate.map(async (scopeName: string) => {
         const scope: Scope | {} = (await this.createScope(scopeName)).data;
