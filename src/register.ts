@@ -113,23 +113,42 @@ export default class Register {
           (resource: Resource) => resource.name === resourceName
         );
         const scopes: Array<string> = data.resources[resourceName];
+        console.log('=====scopes of resource======', resourceName, scopes);
         const scopesToAttach = await this.createScopes(scopes);
         if (
           !new Set(resources.map((resource: Resource) => resource.name)).has(
             resourceName
           )
         ) {
+          console.log(
+            `${resourceName} is creating with scopes`,
+            scopesToAttach
+          );
           await this.createResource(resourceName, scopesToAttach);
         } else {
-          await Promise.all(
-            scopesToAttach.map(async (scope: Scope) => {
-              console.log(
-                `check if SCOPE ${scope.name} is registered to RESOURCE ${resource?.name}`
-              );
-              const resourceById = await this.getResourceById(resource?.id || '')
-              Object.keys(resourceById).map(async (resource : any)=>{ this.updateResource(resource?.name, resource?.id, [scope])})
-            })
+          console.log('getResourceById', resource);
+          const resourceById = await this.getResourceById(resource?._id || '');
+          console.log('resourceById', resourceById);
+          const existingScopes = resourceById.scopes.map((scope: Scope) => {
+            return scope.name;
+          });
+          const scopesNamesToAttach = scopesToAttach.map((scope: Scope) => {
+            return scope.name;
+          });
+          console.log('existingScopes', existingScopes);
+          console.log('scopesNamesToAttach', scopesNamesToAttach);
+          const scopesToCreate: any = _.difference(
+            scopesNamesToAttach,
+            existingScopes
           );
+          console.log('scopesToCreate', scopesToCreate);
+          console.log('scopesToCreate.len', scopesToCreate.length);
+          if (scopesToCreate.length > 0) {
+            const createdScopes = await this.createScopes(scopesToCreate);
+            console.log('createdScopes', createdScopes);
+            // const allScopes = resourceById.scopes.concat(createdScopes);
+            this.updateResource(resourceById, createdScopes);
+          }
         }
       })
     );
@@ -141,10 +160,14 @@ export default class Register {
       ...this._createdScopes,
       ...scopesRes.data
     ];
+    console.log('createdScopes1', createdScopes);
+    console.log(scopes);
+    console.log(createdScopes.map((scope: Scope) => scope.name));
     const scopesToCreate = _.difference(
       scopes,
       createdScopes.map((scope: Scope) => scope.name)
     );
+    console.log('scopesToCreate', scopesToCreate);
     await Promise.all(
       scopesToCreate.map(async (scopeName: string) => {
         const scope: Scope | {} = (await this.createScope(scopeName)).data;
@@ -236,28 +259,33 @@ export default class Register {
       .toPromise();
   }
 
-  async getResourceById(resourceId: string){
-    return this.httpService.get(`${this.realmUrl}/clients/${this.options.clientUniqueId}/authz/resource-server/resource/${resourceId}`,
-    {
-      headers: {
-        Authorization: `Bearer ${kcAdminClient.getAccessToken()}`
-      }
-    }
-    ).toPromise();
+  async getResourceById(resourceId: string) {
+    const resource = await this.httpService
+      .get(
+        `${this.realmUrl}/clients/${this.options.clientUniqueId}/authz/resource-server/resource/${resourceId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${await this.getAccessToken()}`
+          }
+        }
+      )
+      .toPromise();
+    return (await resource).data;
   }
 
-  async updateResource(
-    resourceName: string,
-    resourceId: string,
-    scopes: Array<Scope>
-  ) {
+  async updateResource(resource: Resource, scopes: Array<Scope>) {
+    // http://localhost:8080/auth/admin/realms/nestjs-keycloak-example/clients/cb11fd17-46df-419a-9c67-4a69d1be66ae/authz/resource-server/resource/617427c8-77f0-4576-9233-a748619ddf25
+    // http://localhost:8080/auth/admin/realms/nestjs-keycloak-example/clients/cb11fd17-46df-419a-9c67-4a69d1be66ae/authz/resource-server/resource/617427c8-77f0-4576-9233-a748619ddf25
+
+    // {"name":"app","owner":{"id":"cb11fd17-46df-419a-9c67-4a69d1be66ae","name":"nestjs-keycloak-example"},"ownerManagedAccess":false,"displayName":"app","attributes":{},"_id":"617427c8-77f0-4576-9233-a748619ddf25","uris":[],"scopes":[{"id":"cd09bda2-90c4-47f6-b9ed-4cad38b820b7","name":"world"},{"id":"8c2a2c4a-0a82-48d4-8a5b-08615a876476","name":"yap"},{"id":"1dd4688b-47e3-49e1-aa03-3dfe71454b4a","name":"hello"},{"id":"47363907-05fd-4220-b7a3-d2cb6188091a","name":"yip"},{"id":"16671dc0-9ce1-4201-9710-8a45a53f9e68","name":"austin"}]}
+
     return this.httpService
       .put(
-        `${this.realmUrl}/clients/${this.options.clientUniqueId}/authz/resource-server/resource/${resourceId}`,
+        `${this.realmUrl}/clients/${this.options.clientUniqueId}/authz/resource-server/resource/${resource?._id}`,
         qs.stringify({
           attributes: {},
-          displayName: resourceName,
-          name: resourceName,
+          displayName: resource?.name,
+          name: resource?.name,
           owner: {
             id: this.options.clientUniqueId,
             name: this.options.realm
@@ -265,11 +293,11 @@ export default class Register {
           ownerManagedAccess: false,
           scopes,
           uris: [],
-          _id: resourceId
+          _id: resource?._id
         }),
         {
           headers: {
-            Authorization: `Bearer ${kcAdminClient.getAccessToken()}`
+            Authorization: `Bearer ${await this.getAccessToken()}`
           }
         }
       )
@@ -316,9 +344,12 @@ export interface Resource {
   name: string;
   owner: Resource;
   ownerManagedAccess: boolean;
+  displayName: string;
   type: string;
   uris: [string];
   id: string;
+  _id?: string;
+  scopes: [Scope];
 }
 
 export interface ResourceOwner {
