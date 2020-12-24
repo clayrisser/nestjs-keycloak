@@ -121,21 +121,14 @@ export default class Register {
         ) {
           await this.createResource(resourceName, scopesToAttach);
         } else {
+          // What if the scope exists on another resource but was just added to a new resource???
           const resourceById = await this.getResourceById(resource?._id || '');
           const existingScopes = resourceById.scopes.map((scope: Scope) => {
             return scope.name;
           });
-          const scopesNamesToAttach = scopesToAttach.map((scope: Scope) => {
-            return scope.name;
-          });
-          const scopesToCreate: any = _.difference(
-            // scopesNamesToAttach,
-            scopes,
-            existingScopes
-          );
+          const scopesToCreate: any = _.difference(scopes, existingScopes);
           if (scopesToCreate.length > 0) {
             const createdScopes = await this.createScopes(scopesToCreate);
-            // const allScopes = resourceById.scopes.concat(createdScopes);
             this.updateResource(resourceById, createdScopes);
           }
         }
