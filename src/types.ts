@@ -1,6 +1,20 @@
-import { Grant } from 'keycloak-connect';
-import { ModuleMetadata } from '@nestjs/common/interfaces';
-import { Request } from 'express';
+type Grant = import('keycloak-connect').Grant;
+type Request = import('express').Request;
+
+export interface HashMap<T = any> {
+  [key: string]: T;
+}
+
+export interface Options {
+  adminClientId?: string;
+  adminPassword?: string;
+  adminUsername?: string;
+  baseUrl: string;
+  clientId: string;
+  clientSecret?: string;
+  realm: string;
+  register?: boolean;
+}
 
 export interface UserInfo {
   emailVerified: boolean;
@@ -9,9 +23,8 @@ export interface UserInfo {
   [key: string]: any;
 }
 
-export type KeycloakedRequest<T = Request> = {
-  grant?: Grant;
-  userInfo?: UserInfo;
+export type KeycloakRequest<T = Request> = {
+  kauth?: Kauth;
   session?: {
     refreshToken?: string;
     token?: string;
@@ -20,23 +33,7 @@ export type KeycloakedRequest<T = Request> = {
   };
 } & T;
 
-export interface KeycloakAsyncOptions extends Pick<ModuleMetadata, 'imports'> {
-  inject?: any[];
-  useFactory?: (...args: any[]) => Promise<KeycloakOptions> | KeycloakOptions;
-}
-
-export interface KeycloakOptions {
-  authServerUrl: string;
-  clientId?: string;
-  debug?: boolean;
-  realm?: string;
-  realmPublicKey?: string;
-  secret?: string;
-  clientUniqueId: string;
-  adminUser: string;
-  adminPass: string;
-}
-
-export interface Resources<T = string[]> {
-  [resource: string]: T;
+export interface Kauth {
+  grant?: Grant;
+  userInfo?: UserInfo;
 }

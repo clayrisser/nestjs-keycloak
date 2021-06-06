@@ -4,21 +4,21 @@ import qs from 'qs';
 import { DiscoveryService, Reflector } from '@nestjs/core';
 import { HttpService } from '@nestjs/common';
 import { InstanceWrapper } from '@nestjs/core/injector/instance-wrapper';
-import { KeycloakOptions, Resources } from './types';
-import { RESOURCE } from './decorators/resource.decorator';
-import { ROLES } from './decorators/roles.decorator';
-import { SCOPES } from './decorators/scopes.decorator';
+import { HashMap, Options } from '~/types';
+import { RESOURCE } from '~/decorators/resource.decorator';
+import { ROLES } from '~/decorators/roles.decorator';
+import { SCOPES } from '~/decorators/scopes.decorator';
 
 const kcAdminClient = new KcAdminClient();
 
 export default class Register {
   constructor(
-    private readonly options: KeycloakOptions,
+    private readonly options: Options,
     private httpService: HttpService,
     private readonly discoveryService: DiscoveryService,
     private readonly reflector: Reflector
   ) {
-    this.realmUrl = `${this.options.authServerUrl}/admin/realms/${this.options.realm}`;
+    this.realmUrl = `${this.options.baseUrl}/auth/admin/realms/${this.options.realm}`;
   }
 
   private _accessToken?: string;
@@ -51,10 +51,10 @@ export default class Register {
     ];
   }
 
-  get resources(): Resources {
+  get resources(): HashMap<string[]> {
     return Object.entries(
       this.controllers.reduce(
-        (resources: Resources<Set<string>>, controller: InstanceWrapper) => {
+        (resources: HashMap<Set<string>>, controller: InstanceWrapper) => {
           const methods = getMethods(controller.instance);
           const resourceName = this.reflector.get(
             RESOURCE,
@@ -76,7 +76,10 @@ export default class Register {
         {}
       )
     ).reduce(
-      (resources: Resources, [resourceName, scopes]: [string, Set<string>]) => {
+      (
+        resources: HashMap<string[]>,
+        [resourceName, scopes]: [string, Set<string>]
+      ) => {
         resources[resourceName] = [...scopes];
         return resources;
       },
@@ -91,8 +94,8 @@ export default class Register {
       resources: this.resources
     };
     await kcAdminClient.auth({
-      username: this.options.adminUser,
-      password: this.options.adminPass,
+      username: this.options.adminUsername,
+      password: this.options.adminPassword,
       grantType: 'password',
       clientId: 'admin-cli'
     });
@@ -158,7 +161,7 @@ export default class Register {
 
   async enableAuthorization() {
     await kcAdminClient.clients.update(
-      { id: this.options.clientUniqueId || '' },
+      { id: this.options.adminClientId || '' },
       {
         clientId: this.options.clientId,
         authorizationServicesEnabled: true,
@@ -169,13 +172,13 @@ export default class Register {
 
   async getRoles() {
     return kcAdminClient.clients.listRoles({
-      id: this.options.clientUniqueId || ''
+      id: this.options.adminClientId || ''
     });
   }
 
   async createRoles(role: string) {
     return kcAdminClient.clients.createRole({
-      id: this.options.clientUniqueId,
+      id: this.options.adminClientId,
       name: role
     });
   }
@@ -185,7 +188,7 @@ export default class Register {
     this._accessToken = (
       await this.httpService
         .post(
-          `${this.options.authServerUrl}/realms/master/protocol/openid-connect/token`,
+          `${this.options.baseUrl}/auth/realms/master/protocol/openid-connect/token`,
           qs.stringify({
             client_id: 'admin-cli',
             grant_type: 'password',
@@ -204,7 +207,7 @@ export default class Register {
   async getResources() {
     const resourcesRes = await this.httpService
       .get<[Resource]>(
-        `${this.realmUrl}/clients/${this.options.clientUniqueId}/authz/resource-server/resource`,
+        `${this.realmUrl}/clients/${this.options.adminClientId}/authz/resource-server/resource`,
         {
           headers: {
             Authorization: `Bearer ${await this.getAccessToken()}`
@@ -218,7 +221,7 @@ export default class Register {
   async createResource(resourceName: string, scopes: Scope[] = []) {
     return this.httpService
       .post(
-        `${this.realmUrl}/clients/${this.options.clientUniqueId}/authz/resource-server/resource`,
+        `${this.realmUrl}/clients/${this.options.adminClientId}/authz/resource-server/resource`,
         {
           attributes: {},
           displayName: resourceName,
@@ -240,7 +243,7 @@ export default class Register {
   async getResourceById(resourceId: string) {
     const resource = await this.httpService
       .get(
-        `${this.realmUrl}/clients/${this.options.clientUniqueId}/authz/resource-server/resource/${resourceId}`,
+        `${this.realmUrl}/clients/${this.options.adminClientId}/authz/resource-server/resource/${resourceId}`,
         {
           headers: {
             Authorization: `Bearer ${await this.getAccessToken()}`
@@ -252,20 +255,15 @@ export default class Register {
   }
 
   async updateResource(resource: Resource, scopes: Array<Scope>) {
-    // http://localhost:8080/auth/admin/realms/nestjs-keycloak-example/clients/cb11fd17-46df-419a-9c67-4a69d1be66ae/authz/resource-server/resource/617427c8-77f0-4576-9233-a748619ddf25
-    // http://localhost:8080/auth/admin/realms/nestjs-keycloak-example/clients/cb11fd17-46df-419a-9c67-4a69d1be66ae/authz/resource-server/resource/617427c8-77f0-4576-9233-a748619ddf25
-
-    // {"name":"app","owner":{"id":"cb11fd17-46df-419a-9c67-4a69d1be66ae","name":"nestjs-keycloak-example"},"ownerManagedAccess":false,"displayName":"app","attributes":{},"_id":"617427c8-77f0-4576-9233-a748619ddf25","uris":[],"scopes":[{"id":"cd09bda2-90c4-47f6-b9ed-4cad38b820b7","name":"world"},{"id":"8c2a2c4a-0a82-48d4-8a5b-08615a876476","name":"yap"},{"id":"1dd4688b-47e3-49e1-aa03-3dfe71454b4a","name":"hello"},{"id":"47363907-05fd-4220-b7a3-d2cb6188091a","name":"yip"},{"id":"16671dc0-9ce1-4201-9710-8a45a53f9e68","name":"austin"}]}
-
     return this.httpService
       .put(
-        `${this.realmUrl}/clients/${this.options.clientUniqueId}/authz/resource-server/resource/${resource?._id}`,
+        `${this.realmUrl}/clients/${this.options.adminClientId}/authz/resource-server/resource/${resource?._id}`,
         qs.stringify({
           attributes: {},
           displayName: resource?.name,
           name: resource?.name,
           owner: {
-            id: this.options.clientUniqueId,
+            id: this.options.adminClientId,
             name: this.options.realm
           },
           ownerManagedAccess: false,
@@ -285,7 +283,7 @@ export default class Register {
   async getScopes() {
     const scopes = await this.httpService
       .get<Array<Scope>>(
-        `${this.realmUrl}/clients/${this.options.clientUniqueId}/authz/resource-server/scope`,
+        `${this.realmUrl}/clients/${this.options.adminClientId}/authz/resource-server/scope`,
         {
           headers: {
             Authorization: `Bearer ${await this.getAccessToken()}`
@@ -299,7 +297,7 @@ export default class Register {
   async createScope(scope: string) {
     return this.httpService
       .post<Scope>(
-        `${this.realmUrl}/clients/${this.options.clientUniqueId}/authz/resource-server/scope`,
+        `${this.realmUrl}/clients/${this.options.adminClientId}/authz/resource-server/scope`,
         { name: scope },
         {
           headers: {
@@ -309,6 +307,21 @@ export default class Register {
       )
       .toPromise();
   }
+}
+
+function getMethods(obj: any): ((...args: any[]) => any)[] {
+  const propertyNames = new Set<string>();
+  let current = obj;
+  do {
+    Object.getOwnPropertyNames(current).map((propertyName) =>
+      propertyNames.add(propertyName)
+    );
+  } while ((current = Object.getPrototypeOf(current)));
+  return [...propertyNames]
+    .filter((propertyName: string) => typeof obj[propertyName] === 'function')
+    .map((propertyName: string) => obj[propertyName]) as ((
+    ...args: any[]
+  ) => any)[];
 }
 
 export interface Role {
@@ -347,19 +360,4 @@ export interface DataResources {
 export interface Scope {
   name: string;
   id: string;
-}
-
-function getMethods(obj: any): ((...args: any[]) => any)[] {
-  const propertyNames = new Set<string>();
-  let current = obj;
-  do {
-    Object.getOwnPropertyNames(current).map((propertyName) =>
-      propertyNames.add(propertyName)
-    );
-  } while ((current = Object.getPrototypeOf(current)));
-  return [...propertyNames]
-    .filter((propertyName: string) => typeof obj[propertyName] === 'function')
-    .map((propertyName: string) => obj[propertyName]) as ((
-    ...args: any[]
-  ) => any)[];
 }

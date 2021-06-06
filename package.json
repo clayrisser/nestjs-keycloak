@@ -1,40 +1,40 @@
 {
-  "name": "nestjs-keycloak",
-  "version": "1.5.7",
-  "description": "crud for restful apis built with nestjs and prisma",
+  "name": "whisker-keycloak",
+  "version": "0.0.1",
+  "description": "nestjs module for keycloak",
+  "private": true,
+  "sideEffects": false,
   "keywords": [
-    "nestjs-keycloak",
-    "nestjs",
-    "prisma",
-    "crud",
-    "api",
-    "rest"
+    "whisker-keycloak"
   ],
-  "homepage": "https://github.com/codejamninja/nestjs-keycloak",
+  "homepage": "https://github.com/silicon-hills/whisker-keycloak",
   "bugs": {
-    "url": "https://github.com/codejamninja/nestjs-keycloak/issues",
-    "email": "jam@codejam.ninja"
+    "url": "https://github.com/silicon-hills/whisker-keycloak/issues",
+    "email": "support@siliconhills.dev"
   },
   "license": "MIT",
   "author": {
-    "name": "Jam Risser",
-    "email": "jam@codejam.ninja",
-    "url": "https://codejam.ninja"
+    "name": "SiliconHills LLC",
+    "email": "support@siliconhills.dev",
+    "url": "https://siliconhills.dev"
   },
   "files": [
+    "es",
+    "dist",
     "lib"
   ],
+  "module": "es/index.js",
   "main": "lib/index.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/codejamninja/nestjs-keycloak"
+    "url": "https://github.com/silicon-hills/whisker-keycloak"
   },
   "scripts": {
     "build": "make -s build",
     "clean": "make -s clean",
     "coverage": "make -s coverage",
     "format": "make -s format",
-    "inc": "npm version patch --git=false 2>/dev/null || true",
+    "inc": "make -s inc",
     "lint": "make -s lint",
     "make": "make",
     "prepare": "make -s prepare",
@@ -47,70 +47,83 @@
     "test:watch": "make -s test-watch"
   },
   "dependencies": {
-    "@babel/runtime": "^7.12.5",
-    "axios": "^0.21.0",
-    "class-validator": "^0.12.2",
-    "core-js": "^3.7.0",
-    "graphql": "^15.4.0",
-    "keycloak-admin": "^1.14.1",
-    "keycloak-connect": "^11.0.3",
-    "lodash": "^4.17.20",
-    "qs": "^6.9.4",
-    "rxjs": "^6.6.3",
-    "type-graphql": "^1.1.1"
-  },
-  "peerDependencies": {
-    "@nestjs/common": "^7.4.4",
-    "@nestjs/core": "^7.4.4",
-    "express": "^4.17.1"
+    "@babel/runtime": "^7.14.0",
+    "@nestjs/common": "^7.6.17",
+    "@nestjs/core": "^7.6.17",
+    "axios": "^0.21.1",
+    "core-js": "^3.14.0",
+    "express-session": "^1.17.2",
+    "keycloak-admin": "^1.14.17",
+    "keycloak-connect": "^13.0.1",
+    "lodash": "^4.17.21",
+    "qs": "^6.10.1"
   },
   "devDependencies": {
-    "@babel/cli": "^7.12.7",
-    "@babel/core": "^7.12.7",
-    "@babel/node": "^7.12.6",
-    "@babel/plugin-proposal-class-properties": "^7.12.1",
-    "@babel/plugin-proposal-decorators": "^7.12.1",
-    "@babel/plugin-proposal-optional-chaining": "^7.12.7",
-    "@babel/plugin-transform-runtime": "^7.12.1",
-    "@babel/preset-env": "^7.12.7",
-    "@babel/preset-typescript": "^7.12.7",
-    "@nestjs/common": "^7.5.4",
-    "@nestjs/core": "^7.5.4",
-    "@types/express": "^4.17.9",
+    "@babel/cli": "^7.14.3",
+    "@babel/core": "^7.14.3",
+    "@babel/node": "^7.14.2",
+    "@babel/plugin-proposal-class-properties": "^7.13.0",
+    "@babel/plugin-proposal-decorators": "^7.14.2",
+    "@babel/plugin-proposal-optional-chaining": "^7.14.2",
+    "@babel/plugin-proposal-private-methods": "^7.13.0",
+    "@babel/plugin-transform-runtime": "^7.14.3",
+    "@babel/preset-env": "^7.14.4",
+    "@babel/preset-typescript": "^7.13.0",
     "@types/express-session": "^1.17.3",
-    "@types/jest": "^26.0.15",
-    "@types/lodash": "^4.14.165",
-    "@types/node": "^14.14.9",
-    "@types/qs": "^6.9.5",
-    "@typescript-eslint/eslint-plugin": "^4.8.1",
-    "@typescript-eslint/parser": "^4.8.1",
-    "babel-plugin-transform-typescript-metadata": "^0.3.1",
-    "cspell": "^4.2.2",
-    "eslint": "^7.14.0",
-    "eslint-config-airbnb-typescript": "^12.0.0",
-    "eslint-config-prettier": "^6.15.0",
-    "eslint-plugin-import": "^2.22.1",
+    "@types/jest": "^26.0.23",
+    "@types/lodash": "^4.14.170",
+    "@typescript-eslint/eslint-plugin": "^4.26.0",
+    "@typescript-eslint/parser": "^4.26.0",
+    "babel-loader": "^8.2.2",
+    "babel-plugin-inline-import": "^3.0.0",
+    "babel-plugin-macros": "^3.1.0",
+    "babel-plugin-module-resolver": "^4.1.0",
+    "babel-plugin-transform-typescript-metadata": "^0.3.2",
+    "cloc": "^2.8.0",
+    "cspell": "^5.6.0",
+    "eslint": "^7.28.0",
+    "eslint-config-airbnb-typescript": "^12.3.1",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-import": "^2.23.4",
+    "eslint-plugin-spellcheck": "^0.0.17",
     "express": "^4.17.1",
-    "jest": "^26.6.3",
+    "jest": "^27.0.4",
     "jest-sonar-reporter": "^2.0.0",
-    "lockfile-lint": "^4.3.7",
+    "lockfile-lint": "^4.6.2",
     "majestic": "^1.8.0",
-    "prettier": "^2.2.0",
-    "typescript": "^4.1.2"
+    "prettier": "^2.3.1",
+    "typescript": "^4.3.2",
+    "webpack": "^5.38.1",
+    "webpack-cli": "^4.7.0"
   },
   "engines": {
     "node": ">=6.0.0"
   },
   "eslintIgnore": [
+    "dist",
+    "es",
     "lib"
   ],
   "jest": {
-    "testRegex": "tests(/|/.*/)[^_/]*[jt]sx?$",
-    "verbose": true
+    "testRegex": "((/(tests|__tests__)((/|/[^_.\n][^/\n]*(/[^_.\n][^/\n]+)*/)[^_.\n][^/\n]*))|((/|/.*/)(([^_.\n][^/\n]*.(spec|test))|(spec|test)))).[jt]sx?$",
+    "testEnvironment": "node",
+    "verbose": true,
+    "testPathIgnorePatterns": [
+      "<rootDir>/dist/",
+      "<rootDir>/es/",
+      "<rootDir>/lib/"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/_setup.ts"
+    ]
   },
   "jestSonar": {
     "reportPath": "node_modules/.tmp/reports",
     "reportFile": "test-report.xml",
     "indent": 4
+  },
+  "prettier": {
+    "singleQuote": true,
+    "trailingComma": "none"
   }
 }

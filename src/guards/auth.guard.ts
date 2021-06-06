@@ -10,18 +10,19 @@ import {
   Logger
 } from '@nestjs/common';
 import authenticate from '../authenticate';
-import { KEYCLOAK_INSTANCE, KEYCLOAK_OPTIONS } from '../constants';
-import { KeycloakOptions, KeycloakedRequest, UserInfo } from '../types';
+import { Options, KeycloakedRequest, UserInfo } from '../types';
 import { getReq, extractJwt } from '../utils';
+import { KEYCLOAK } from '~/keycloak.provider';
+import { KEYCLOAK_OPTIONS } from '~/index';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
   logger = new Logger(AuthGuard.name);
 
   constructor(
-    @Inject(KEYCLOAK_INSTANCE)
+    @Inject(KEYCLOAK)
     private readonly keycloak: Keycloak,
-    @Inject(KEYCLOAK_OPTIONS) private options: KeycloakOptions,
+    @Inject(KEYCLOAK_OPTIONS) private options: Options,
     private readonly reflector: Reflector,
     private httpService: HttpService
   ) {}
