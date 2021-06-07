@@ -223,34 +223,10 @@ export default class KeycloakService {
     }
   }
 
-  private async reqSessionSetUserInfo() {
-    const userInfo = await this.getUserInfo();
-    if (!this.req.kauth) this.req.kauth = {};
-    if (userInfo) {
-      this.req.kauth.userInfo = userInfo;
-      if (this.req.session) {
-        if (!this.req.session?.kauth) this.req.session.kauth = {};
-        this.req.session.kauth.userInfo = userInfo;
-      }
-    }
-  }
-
-  private async reqSetGrant() {
-    const accessToken = await this.getAccessToken();
-    if (!this.req.kauth) this.req.kauth = {};
-    if (!accessToken) return;
-    const grant = await this.keycloak.grantManager.createGrant({
-      // access_token is actually a string but due to a bug in keycloak-connect
-      // we pretend it is a Token
-      access_token: accessToken
-    });
-    if (grant) this.req.kauth.grant = grant;
-  }
-
   async init() {
     if (this._initialized) return;
-    await this.reqSetGrant();
-    await this.reqSessionSetUserInfo();
+    await this.setGrant();
+    await this.setUserInfo();
     this._initialized = true;
   }
 
@@ -262,16 +238,16 @@ export default class KeycloakService {
     return false;
   }
 
-  async isAuthenticated(): Promise<boolean> {
-    await this.init();
-    const accessToken = await this.getAccessToken();
-    return !!accessToken && !accessToken?.isExpired();
-  }
-
   async hasRole(role: string): Promise<boolean> {
     await this.init();
     const accessToken = await this.getAccessToken();
     return this.isAuthenticated() && !!accessToken?.hasRole(role);
+  }
+
+  async isAuthenticated(): Promise<boolean> {
+    await this.init();
+    const accessToken = await this.getAccessToken();
+    return !!accessToken && !accessToken?.isExpired();
   }
 
   async authenticate(
@@ -290,6 +266,7 @@ export default class KeycloakService {
     delete this._refreshToken;
     delete this._userInfo;
     delete this.req.kauth;
+    this._initialized = false;
     if (!this.req.session) return;
     delete this.req.session.kauth;
     delete this.req.session.token;
@@ -300,6 +277,30 @@ export default class KeycloakService {
         return resolve();
       });
     });
+  }
+
+  private async setUserInfo() {
+    const userInfo = await this.getUserInfo();
+    if (!this.req.kauth) this.req.kauth = {};
+    if (userInfo) {
+      this.req.kauth.userInfo = userInfo;
+      if (this.req.session) {
+        if (!this.req.session?.kauth) this.req.session.kauth = {};
+        this.req.session.kauth.userInfo = userInfo;
+      }
+    }
+  }
+
+  private async setGrant() {
+    const accessToken = await this.getAccessToken();
+    if (!this.req.kauth) this.req.kauth = {};
+    if (!accessToken) return;
+    const grant = await this.keycloak.grantManager.createGrant({
+      // access_token is actually a string but due to a bug in keycloak-connect
+      // we pretend it is a Token
+      access_token: accessToken
+    });
+    if (grant) this.req.kauth.grant = grant;
   }
 }
 
