@@ -17,132 +17,123 @@ export default class KeycloakService {
     private readonly httpService: HttpService
   ) {}
 
-  async init() {
-    await this._ensureTokens();
-    await this._ensureGrant();
-    await this._ensureUserInfo();
-  }
+  private logger = console;
 
-  async isAuthorizedByRole(roles: string[]) {
-    await this._ensureTokens();
-    for (const role of roles) {
-      if (await this.hasRole(role)) return true;
-    }
-    return false;
-  }
+  private _bearerToken: Token | undefined;
 
-  async isAuthenticated(): Promise<boolean> {
-    await this._ensureTokens();
-    return !!this._accessToken && !this._accessToken?.isExpired();
-  }
+  private _refreshToken: Token | undefined;
 
-  async hasRole(role: string): Promise<boolean> {
-    await this._ensureTokens();
-    return this.isAuthenticated() && !!this._accessToken?.hasRole(role);
-  }
+  private _accessToken: Token | undefined;
 
-  async getAccessToken(): Promise<Token | null> {
-    const { clientId } = this.options;
-    const accessToken = this.bearerToken?.token || this.req.session?.token;
-    let token: Token | null =
-      (this.req.kauth?.grant?.access_token as Token) || null;
-    if (!token && accessToken) token = new Token(accessToken, clientId);
-    if (!token || token.isExpired()) {
-      const refreshToken = this.refreshToken?.token;
-      if (refreshToken) {
-        try {
-          const tokens = await this._grantTokens({ refreshToken });
-          if (this.req.session) {
-            if (tokens.refreshToken) {
-              this.req.session.refreshToken = tokens.refreshToken.token;
-            }
-            if (tokens.accessToken) {
-              this.req.session.token = tokens.accessToken.token;
-            }
-          }
-          if (tokens.accessToken) {
-            token = tokens.accessToken;
-          }
-        } catch (err) {
-          if (err.statusCode && err.statusCode < 500) {
-            const message = err.message || err.payload?.message;
-            this.logger.error(
-              `${err.statusCode}:`,
-              ...[message ? [message] : []],
-              ...[err.payload ? [JSON.stringify(err.payload)] : []]
-            );
-            return null;
-          }
-          throw err;
-        }
-      }
-    }
-    return token;
-  }
+  private _userInfo: UserInfo | undefined;
 
-  async authenticate(
-    options: GrantTokensOptions
-  ): Promise<RefreshTokenGrant | null> {
-    const tokens = await this._grantTokens(options);
-    if (this.req.session) {
-      if (tokens.refreshToken) {
-        this.req.session.refreshToken = tokens.refreshToken.token;
-      }
-      if (tokens.accessToken) {
-        this.req.session.token = tokens.accessToken.token;
-      }
-    }
-    if (tokens.accessToken) this._accessToken = tokens.accessToken;
-    await this.init();
-    return tokens;
-  }
+  private _initialized = false;
 
-  async logout() {
-    this._accessToken = null;
-    delete this.req.kauth;
-    if (!this.req.session) return;
-    delete this.req.session.refreshToken;
-    delete this.req.session.token;
-    delete this.req.session.userInfo;
-    await new Promise<void>((resolve, reject) => {
-      if (!this.req.session?.destroy) return resolve();
-      this.req.session?.destroy((err: Error) => {
-        if (err) return reject(err);
-        return resolve();
-      });
-    });
-  }
-
-  get bearerToken(): Token | null {
-    const { clientId } = this.options;
+  get bearerToken(): Token | undefined {
+    if (this._bearerToken) return this._bearerToken;
+    const { clientId, strict } = this.options;
     const { authorization } = this.req.headers;
-    if (typeof authorization === 'undefined') return null;
+    if (typeof authorization === 'undefined') return;
     if (authorization?.indexOf(' ') <= -1) {
-      return new Token(authorization, clientId);
+      if (strict) return;
+      this._bearerToken = new Token(authorization, clientId);
+      return this._bearerToken;
     }
-    const auth = authorization?.split(' ');
-    if (auth && auth[0] && auth[0].toLowerCase() === 'bearer') {
-      return new Token(auth[1], clientId);
+    const authorizationArr = authorization?.split(' ');
+    if (
+      authorizationArr &&
+      authorizationArr[0] &&
+      authorizationArr[0].toLowerCase() === 'bearer'
+    ) {
+      this._bearerToken = new Token(authorizationArr[1], clientId);
+      return this._bearerToken;
     }
-    return null;
+    return;
   }
 
-  get refreshToken(): Token | null {
+  get refreshToken(): Token | undefined {
     const { clientId } = this.options;
-    return this.req.session?.refreshToken
-      ? new Token(this.req.session?.refreshToken, clientId)
-      : null;
+    if (this._refreshToken) return this._refreshToken;
+    this._refreshToken = this.req.session?.kauth?.refreshToken
+      ? new Token(this.req.session?.kauth.refreshToken, clientId)
+      : undefined;
+    return this._refreshToken;
   }
 
-  get userInfo(): UserInfo | null {
-    return this.req.kauth?.userInfo || null;
+  get grant(): Grant | undefined {
+    return this.req.kauth?.grant;
   }
 
-  get grant(): Grant | null {
-    return this.req.kauth?.grant || null;
+  async getAccessToken(): Promise<Token | undefined> {
+    if (this._accessToken) return this._accessToken;
+    if (this.bearerToken) {
+      this._accessToken = this.bearerToken;
+      return this._accessToken;
+    }
+    const { clientId } = this.options;
+    let accessToken = this.req.kauth?.grant?.access_token as Token | undefined;
+    if (!accessToken && this.req.session?.kauth?.accessToken) {
+      accessToken = new Token(this.req.session?.kauth?.accessToken, clientId);
+    }
+    if ((!accessToken || accessToken.isExpired()) && this.refreshToken) {
+      try {
+        const tokens = await this.grantTokens({
+          refreshToken: this.refreshToken.token
+        });
+        this.sessionSetTokens(tokens.accessToken, tokens.refreshToken);
+        if (tokens.accessToken) accessToken = tokens.accessToken;
+      } catch (err) {
+        if (err.statusCode && err.statusCode < 500) {
+          this.logger.error(
+            `${err.statusCode}:`,
+            ...[err.message ? [err.message] : []],
+            ...[err.payload ? [JSON.stringify(err.payload)] : []]
+          );
+          return;
+        }
+        throw err;
+      }
+    }
+    this._accessToken = accessToken;
+    return this._accessToken;
   }
 
-  private async _grantTokens({
+  async getUserInfo(): Promise<UserInfo> {
+    if (this._userInfo) return this._userInfo;
+    if (this.req.kauth?.userInfo) {
+      this._userInfo = this.req.kauth.userInfo;
+      return this._userInfo;
+    }
+    if (!this.bearerToken && this.req.session?.kauth?.userInfo) {
+      this._userInfo = this.req.session.kauth.userInfo;
+      return this._userInfo;
+    }
+    const accessToken = await this.getAccessToken();
+    const userInfo =
+      accessToken &&
+      (await this.keycloak.grantManager.userInfo<
+        Token | string,
+        {
+          email_verified: boolean;
+          preferred_username: string;
+          sub: string;
+          [key: string]: any;
+        }
+      >(accessToken));
+    const result = {
+      ...{
+        emailVerified: userInfo?.email_verified,
+        preferredUsername: userInfo?.preferred_username
+      },
+      ...userInfo
+    } as UserInfo;
+    delete result?.email_verified;
+    delete result?.preferred_username;
+    this._userInfo = result;
+    return this._userInfo;
+  }
+
+  async grantTokens({
     password,
     refreshToken,
     scope,
@@ -162,11 +153,12 @@ export default class KeycloakService {
         refresh_token: refreshToken
       });
     } else {
+      if (!username) throw new Error('missing username or refreshToken');
       data = qs.stringify({
         ...(clientSecret ? { client_secret: clientSecret } : {}),
         client_id: clientId,
         grant_type: 'password',
-        password,
+        password: password || '',
         scope: scopeArr.join(' '),
         username
       });
@@ -218,72 +210,96 @@ export default class KeycloakService {
     }
   }
 
-  private logger = console;
-
-  private _accessToken: Token | null = null;
-
-  private async _getUserInfo(): Promise<UserInfo> {
-    if (this.req.session.userInfo) return this.req.session.userInfo;
-    this._ensureTokens();
-    const userinfo =
-      this._accessToken &&
-      (await this.keycloak.grantManager.userInfo<
-        Token | string,
-        {
-          email_verified: boolean;
-          preferred_username: string;
-          sub: string;
-          [key: string]: any;
-        }
-      >(this._accessToken));
-    const userInfo = {
-      ...{
-        emailVerified: userinfo?.email_verified,
-        preferredUsername: userinfo?.preferred_username
-      },
-      ...userinfo
-    } as UserInfo;
-    delete userInfo?.email_verified;
-    delete userInfo?.preferred_username;
-    return userInfo;
+  private sessionSetTokens(accessToken?: Token, refreshToken?: Token) {
+    if (this.req.session) {
+      if (!this.req.session.kauth) this.req.session.kauth = {};
+      if (refreshToken) {
+        this.req.session.kauth.refreshToken = refreshToken.token;
+      }
+      if (accessToken) {
+        this.req.session.kauth.accessToken = accessToken.token;
+        this.req.session.token = accessToken.token;
+      }
+    }
   }
 
-  private async _ensureTokens() {
-    if (!this._accessToken) await this._setTokens();
-  }
-
-  private async _setTokens() {
-    const accessToken = await this.getAccessToken();
-    if (accessToken) this._accessToken = accessToken;
-  }
-
-  private async _ensureGrant() {
-    if (!this.req.kauth?.grant) await this._setGrant();
-  }
-
-  private async _setGrant() {
-    this._ensureTokens();
+  private async reqSessionSetUserInfo() {
+    const userInfo = await this.getUserInfo();
     if (!this.req.kauth) this.req.kauth = {};
-    if (!this._accessToken) return;
+    if (userInfo) {
+      this.req.kauth.userInfo = userInfo;
+      if (this.req.session) {
+        if (!this.req.session?.kauth) this.req.session.kauth = {};
+        this.req.session.kauth.userInfo = userInfo;
+      }
+    }
+  }
+
+  private async reqSetGrant() {
+    const accessToken = await this.getAccessToken();
+    if (!this.req.kauth) this.req.kauth = {};
+    if (!accessToken) return;
     const grant = await this.keycloak.grantManager.createGrant({
       // access_token is actually a string but due to a bug in keycloak-connect
       // we pretend it is a Token
-      access_token: this._accessToken?.token as unknown as Token
+      access_token: accessToken
     });
     if (grant) this.req.kauth.grant = grant;
   }
 
-  private async _ensureUserInfo() {
-    if (!this.req.kauth?.userInfo) await this._setUserInfo();
+  async init() {
+    if (this._initialized) return;
+    await this.reqSetGrant();
+    await this.reqSessionSetUserInfo();
+    this._initialized = true;
   }
 
-  private async _setUserInfo() {
-    const userInfo = await this._getUserInfo();
-    if (!this.req.kauth) this.req.kauth = {};
-    if (userInfo) {
-      this.req.kauth.userInfo = userInfo;
-      if (this.req.session) this.req.session.userInfo = userInfo;
+  async isAuthorizedByRole(roles: string[]) {
+    await this.init();
+    for (const role of roles) {
+      if (await this.hasRole(role)) return true;
     }
+    return false;
+  }
+
+  async isAuthenticated(): Promise<boolean> {
+    await this.init();
+    const accessToken = await this.getAccessToken();
+    return !!accessToken && !accessToken?.isExpired();
+  }
+
+  async hasRole(role: string): Promise<boolean> {
+    await this.init();
+    const accessToken = await this.getAccessToken();
+    return this.isAuthenticated() && !!accessToken?.hasRole(role);
+  }
+
+  async authenticate(
+    options: GrantTokensOptions
+  ): Promise<RefreshTokenGrant | null> {
+    const tokens = await this.grantTokens(options);
+    this.sessionSetTokens(tokens.accessToken, tokens.refreshToken);
+    if (tokens.accessToken) this._accessToken = tokens.accessToken;
+    await this.init();
+    return tokens;
+  }
+
+  async logout() {
+    delete this._accessToken;
+    delete this._bearerToken;
+    delete this._refreshToken;
+    delete this._userInfo;
+    delete this.req.kauth;
+    if (!this.req.session) return;
+    delete this.req.session.kauth;
+    delete this.req.session.token;
+    await new Promise<void>((resolve, reject) => {
+      if (!this.req.session?.destroy) return resolve();
+      this.req.session?.destroy((err: Error) => {
+        if (err) return reject(err);
+        return resolve();
+      });
+    });
   }
 }
 

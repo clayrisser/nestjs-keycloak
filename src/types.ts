@@ -14,6 +14,7 @@ export interface Options {
   clientSecret?: string;
   realm: string;
   register?: boolean;
+  strict?: boolean;
 }
 
 export interface UserInfo {
@@ -26,9 +27,12 @@ export interface UserInfo {
 export type KeycloakRequest<T = Request> = {
   kauth?: Kauth;
   session?: {
-    refreshToken?: string;
     token?: string;
-    userInfo?: UserInfo;
+    kauth?: {
+      accessToken?: string;
+      refreshToken?: string;
+      userInfo?: UserInfo;
+    };
     [key: string]: any;
   };
 } & T;
