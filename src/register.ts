@@ -4,7 +4,7 @@
  * File Created: 14-07-2021 11:43:59
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 14-07-2021 11:46:20
+ * Last Modified: 15-07-2021 16:04:36
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -23,16 +23,19 @@
  */
 
 import KcAdminClient from 'keycloak-admin';
+import RoleRepresentation from 'keycloak-admin/lib/defs/roleRepresentation';
 import _ from 'lodash';
 import qs from 'qs';
+import { AxiosResponse } from 'axios';
 import { DiscoveryService, Reflector } from '@nestjs/core';
-import { HttpService } from '@nestjs/common';
+import { HttpService } from '@nestjs/axios';
 import { InstanceWrapper } from '@nestjs/core/injector/instance-wrapper';
 import { HashMap, Options } from '~/types';
 import { RESOURCE } from '~/decorators/resource.decorator';
 import { ROLES } from '~/decorators/roles.decorator';
 import { SCOPES } from '~/decorators/scopes.decorator';
 
+const logger = console;
 const kcAdminClient = new KcAdminClient();
 
 export default class Register {
@@ -112,7 +115,7 @@ export default class Register {
   }
 
   async setup() {
-    console.log('registering keycloak . . .');
+    logger.log('registering keycloak . . .');
     const data: Data = {
       roles: this.roles,
       resources: this.resources
@@ -194,7 +197,7 @@ export default class Register {
     );
   }
 
-  async getRoles() {
+  async getRoles(): Promise<RoleRepresentation[]> {
     return kcAdminClient.clients.listRoles({
       id: this.options.adminClientId || ''
     });
@@ -242,7 +245,10 @@ export default class Register {
     return resourcesRes.data;
   }
 
-  async createResource(resourceName: string, scopes: Scope[] = []) {
+  async createResource(
+    resourceName: string,
+    scopes: Scope[] = []
+  ): Promise<AxiosResponse<any>> {
     return this.httpService
       .post(
         `${this.realmUrl}/clients/${this.options.adminClientId}/authz/resource-server/resource`,
@@ -340,6 +346,7 @@ function getMethods(obj: any): ((...args: any[]) => any)[] {
     Object.getOwnPropertyNames(current).map((propertyName) =>
       propertyNames.add(propertyName)
     );
+    // eslint-disable-next-line no-cond-assign
   } while ((current = Object.getPrototypeOf(current)));
   return [...propertyNames]
     .filter((propertyName: string) => typeof obj[propertyName] === 'function')

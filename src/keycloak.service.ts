@@ -4,7 +4,7 @@
  * File Created: 14-07-2021 11:43:59
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 14-07-2021 11:46:17
+ * Last Modified: 15-07-2021 16:08:16
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -43,23 +43,23 @@ export default class KeycloakService {
 
   private logger = console;
 
-  private _bearerToken: Token | undefined;
+  private _bearerToken: Token | null = null;
 
-  private _refreshToken: Token | undefined;
+  private _refreshToken: Token | null = null;
 
-  private _accessToken: Token | undefined;
+  private _accessToken: Token | null = null;
 
-  private _userInfo: UserInfo | undefined;
+  private _userInfo: UserInfo | null = null;
 
   private _initialized = false;
 
-  get bearerToken(): Token | undefined {
+  get bearerToken(): Token | null {
     if (this._bearerToken) return this._bearerToken;
     const { clientId, strict } = this.options;
     const { authorization } = this.req.headers;
-    if (typeof authorization === 'undefined') return;
+    if (typeof authorization === 'undefined') return null;
     if (authorization?.indexOf(' ') <= -1) {
-      if (strict) return;
+      if (strict) return null;
       this._bearerToken = new Token(authorization, clientId);
       return this._bearerToken;
     }
@@ -72,15 +72,15 @@ export default class KeycloakService {
       this._bearerToken = new Token(authorizationArr[1], clientId);
       return this._bearerToken;
     }
-    return;
+    return null;
   }
 
-  get refreshToken(): Token | undefined {
+  get refreshToken(): Token | null {
     const { clientId } = this.options;
     if (this._refreshToken) return this._refreshToken;
     this._refreshToken = this.req.session?.kauth?.refreshToken
       ? new Token(this.req.session?.kauth.refreshToken, clientId)
-      : undefined;
+      : null;
     return this._refreshToken;
   }
 
@@ -88,14 +88,14 @@ export default class KeycloakService {
     return this.req.kauth?.grant;
   }
 
-  async getAccessToken(): Promise<Token | undefined> {
+  async getAccessToken(): Promise<Token | null> {
     if (this._accessToken) return this._accessToken;
     if (this.bearerToken) {
       this._accessToken = this.bearerToken;
       return this._accessToken;
     }
     const { clientId } = this.options;
-    let accessToken = this.req.kauth?.grant?.access_token as Token | undefined;
+    let accessToken = (this.req.kauth?.grant?.access_token as Token) || null;
     if (!accessToken && this.req.session?.kauth?.accessToken) {
       accessToken = new Token(this.req.session?.kauth?.accessToken, clientId);
     }
@@ -113,7 +113,7 @@ export default class KeycloakService {
             ...[err.message ? [err.message] : []],
             ...[err.payload ? [JSON.stringify(err.payload)] : []]
           );
-          return;
+          return null;
         }
         throw err;
       }
@@ -164,7 +164,7 @@ export default class KeycloakService {
     username
   }: GrantTokensOptions): Promise<RefreshTokenGrant> {
     const { clientId, clientSecret } = this.options;
-    let scopeArr = [
+    const scopeArr = [
       'openid',
       ...(Array.isArray(scope) ? scope : (scope || 'profile').split(' '))
     ];
@@ -198,13 +198,17 @@ export default class KeycloakService {
           }
         )
         .toPromise()) as AxiosResponse<TokenResponseData>;
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       const {
+        // eslint-disable-next-line @typescript-eslint/naming-convention
         access_token,
         scope,
+        // eslint-disable-next-line @typescript-eslint/naming-convention
         refresh_token,
+        // eslint-disable-next-line @typescript-eslint/naming-convention
         expires_in,
+        // eslint-disable-next-line @typescript-eslint/naming-convention
         refresh_expires_in,
+        // eslint-disable-next-line @typescript-eslint/naming-convention
         token_type
       } = res.data;
       return {
@@ -256,6 +260,7 @@ export default class KeycloakService {
 
   async isAuthorizedByRole(roles: string[]) {
     await this.init();
+    // eslint-disable-next-line no-restricted-syntax
     for (const role of roles) {
       if (await this.hasRole(role)) return true;
     }
@@ -285,10 +290,10 @@ export default class KeycloakService {
   }
 
   async logout() {
-    delete this._accessToken;
-    delete this._bearerToken;
-    delete this._refreshToken;
-    delete this._userInfo;
+    this._accessToken = null;
+    this._bearerToken = null;
+    this._refreshToken = null;
+    this._userInfo = null;
     delete this.req.kauth;
     this._initialized = false;
     if (!this.req.session) return;
@@ -300,6 +305,7 @@ export default class KeycloakService {
         if (err) return reject(err);
         return resolve();
       });
+      return null;
     });
   }
 

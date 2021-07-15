@@ -4,7 +4,7 @@
  * File Created: 14-07-2021 11:39:50
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 14-07-2021 11:46:08
+ * Last Modified: 15-07-2021 16:09:11
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -24,13 +24,8 @@
 
 import Keycloak from 'keycloak-connect';
 import { DiscoveryModule, DiscoveryService, Reflector } from '@nestjs/core';
-import {
-  DynamicModule,
-  Module,
-  Provider,
-  HttpModule,
-  HttpService
-} from '@nestjs/common';
+import { DynamicModule, Module, Provider } from '@nestjs/common';
+import { HttpService, HttpModule } from '@nestjs/axios';
 import Register from './register';
 import { KeycloakAsyncOptions, KeycloakOptions } from './types';
 import { KeycloakService } from './keycloak.service';

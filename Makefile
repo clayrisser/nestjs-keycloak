@@ -3,7 +3,7 @@
 # File Created: 14-07-2021 11:43:59
 # Author: Clay Risser <email@clayrisser.com>
 # -----
-# Last Modified: 14-07-2021 11:46:53
+# Last Modified: 15-07-2021 15:50:41
 # Modified By: Clay Risser <email@clayrisser.com>
 # -----
 # Silicon Hills LLC (c) Copyright 2021
@@ -64,7 +64,8 @@ SPELLCHECK_DEPS := $(call deps,spellcheck,$(shell $(GIT) ls-files 2>$(NULL) | \
 SPELLCHECK_TARGET := $(SPELLCHECK_DEPS) $(ACTION)/spellcheck
 $(ACTION)/spellcheck:
 	@mkdir -p $(TMP_DIR)
-	@cat .vscode/settings.json | jq '.["cSpell.words"]' > $(TMP_DIR)/cspellrc.json
+	@echo '{"language":"en","version":"0.1","words":$(shell cat .vscode/settings.json | $(SED) 's|^\s*//.*||g' | jq ".[\"cSpell.words\"]")}' > \
+		$(TMP_DIR)/cspellrc.json
 	-@$(CSPELL) --config $(TMP_DIR)/cspellrc.json $(shell $(call get_deps,spellcheck))
 	@$(call done,spellcheck)
 
@@ -83,7 +84,7 @@ TEST_DEPS := $(call deps,test,$(shell $(GIT) ls-files 2>$(NULL) | \
 	grep -E "\.([jt]sx?)$$"))
 TEST_TARGET := $(TEST_DEPS) $(ACTION)/test
 $(ACTION)/test:
-	-@$(JEST) --json --outputFile=node_modules/.tmp/jestTestResults.json --coverage \
+	-@$(JEST) --pass-with-no-tests --json --outputFile=node_modules/.tmp/jestTestResults.json--coverage \
 		--coverageDirectory=node_modules/.tmp/coverage --testResultsProcessor=jest-sonar-reporter \
 		--collectCoverageFrom='$(COLLECT_COVERAGE_FROM)' --findRelatedTests $(shell $(call get_deps,test))
 	@$(call done,test)
@@ -91,18 +92,12 @@ $(ACTION)/test:
 ACTIONS += build~test
 BUILD_DEPS := $(call deps,build,$(shell $(GIT) ls-files 2>$(NULL) | \
 	grep -E "\.([jt]sx?)$$"))
-BUILD_TARGET := $(BUILD_DEPS) $(ACTION)/build
-$(ACTION)/build: es/index.js lib/index.js ;
-	@if [ ! -f $(MAKE_CACHE)/^build ]; then \
-		$(MAKE) -s $(ACTION)/^build; \
-	fi
-	@$(call clear_cache,$(ACTION)/^build)
-es/index.js:
-	@$(MAKE) -s $(ACTION)/^build
+BUILD_TARGET := lib/index.js
 lib/index.js:
-	@$(MAKE) -s $(ACTION)/^build
-$(ACTION)/^build:
-	@$(WEBPACK)
+	@$(MAKE) -s _build
+	@rm -rf $(ACTION)/build $(NOFAIL)
+$(ACTION)/build:
+#	@$(WEBPACK)
 	@$(BABEL) --env-name umd src -d lib --extensions '.js,.jsx,.ts,.tsx' --source-maps
 	@$(BABEL) --env-name esm src -d es --extensions '.js,.jsx,.ts,.tsx' --source-maps
 	@$(TSC) -p tsconfig.app.json -d --emitDeclarationOnly
@@ -197,4 +192,3 @@ CACHE_ENVS += \
 	TMP_DIR \
 	TSC \
 	WEBPACK
-

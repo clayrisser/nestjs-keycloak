@@ -4,7 +4,7 @@
  * File Created: 14-07-2021 11:43:59
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 14-07-2021 11:47:05
+ * Last Modified: 15-07-2021 15:58:45
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -43,6 +43,7 @@ module.exports = {
     }
   },
   rules: {
+    'no-inner-declarations': 'off',
     '@typescript-eslint/comma-dangle': ['error', 'never'],
     '@typescript-eslint/indent': 'off',
     '@typescript-eslint/no-shadow': 'off',
@@ -51,12 +52,23 @@ module.exports = {
     'class-methods-use-this': 'off',
     'comma-dangle': 'off',
     'default-case': 'off',
-    'import/extensions': ['error', 'never', { json: 'always' }],
+    'import/extensions': [
+      'error',
+      'never',
+      {
+        decorator: 'always',
+        json: 'always',
+        middleware: 'always',
+        module: 'always',
+        provider: 'always',
+        service: 'always'
+      }
+    ],
     'import/no-cycle': 'off',
     'import/prefer-default-export': 'off',
     'max-classes-per-file': 'off',
     'max-lines': ['error', 500],
-    'max-lines-per-function': ['warn', 50],
+    'max-lines-per-function': ['warn', 80],
     'no-await-in-loop': 'off',
     'no-empty-function': ['warn', { allow: ['constructors'] }],
     'no-extra-boolean-cast': 'off',
@@ -119,22 +131,14 @@ module.exports = {
           '**/*.spec.jsx',
           '**/*.spec.ts',
           '**/*.spec.tsx',
-          '**/*.story.js',
-          '**/*.story.jsx',
-          '**/*.story.ts',
-          '**/*.story.tsx',
           '**/*.test.js',
           '**/*.test.jsx',
           '**/*.test.ts',
           '**/*.test.tsx',
-          'storybook/**/*.js',
-          'storybook/**/*.jsx',
-          'storybook/**/*.ts',
-          'storybook/**/*.tsx',
-          'tests/*.js',
-          'tests/*.jsx',
-          'tests/*.ts',
-          'tests/*.tsx'
+          'tests/**/*.js',
+          'tests/**/*.jsx',
+          'tests/**/*.ts',
+          'tests/**/*.tsx'
         ]
       }
     ]

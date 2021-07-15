@@ -4,7 +4,7 @@
  * File Created: 14-07-2021 11:43:59
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 14-07-2021 11:45:55
+ * Last Modified: 15-07-2021 15:55:10
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -34,7 +34,7 @@ import {
   Logger
 } from '@nestjs/common';
 import authenticate from '../authenticate';
-import { Options, KeycloakedRequest, UserInfo } from '../types';
+import { Options, KeycloakedRequest, UserInfo } from '~/types';
 import { getReq, extractJwt } from '../utils';
 import { KEYCLOAK } from '~/keycloak.provider';
 import { KEYCLOAK_OPTIONS } from '~/index';
