@@ -4,7 +4,7 @@
  * File Created: 14-07-2021 11:43:59
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 19:07:45
+ * Last Modified: 15-07-2021 19:20:11
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -26,8 +26,7 @@ import KeycloakConnect, { Keycloak } from 'keycloak-connect';
 import session from 'express-session';
 import { FactoryProvider } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
-import { KeycloakOptions, KeycloakRequest } from './types';
-import { KEYCLOAK_OPTIONS } from './index';
+import { KeycloakOptions, KeycloakRequest, KEYCLOAK_OPTIONS } from './types';
 
 export const KEYCLOAK = 'KEYCLOAK';
 

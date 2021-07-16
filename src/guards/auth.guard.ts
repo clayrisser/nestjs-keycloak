@@ -4,7 +4,7 @@
  * File Created: 14-07-2021 11:43:59
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 19:06:11
+ * Last Modified: 15-07-2021 19:22:08
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -34,8 +34,7 @@ import {
 } from '@nestjs/common';
 import KeycloakService from '../keycloak.service';
 import { KEYCLOAK } from '../keycloak.provider';
-import { KEYCLOAK_OPTIONS } from '../index';
-import { KeycloakOptions } from '../types';
+import { KEYCLOAK_OPTIONS, KeycloakOptions } from '../types';
 import { PUBLIC } from '../decorators/public.decorator';
 import { RESOURCE } from '../decorators/resource.decorator';
 import { ROLES } from '../decorators/roles.decorator';

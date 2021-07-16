@@ -4,7 +4,7 @@
  * File Created: 14-07-2021 11:43:59
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 16:44:34
+ * Last Modified: 15-07-2021 19:19:54
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -73,3 +73,6 @@ export interface Kauth {
   grant?: Grant;
   userInfo?: UserInfo;
 }
+
+export const KEYCLOAK_OPTIONS = 'KEYCLOAK_OPTIONS';
+export const KEYCLOAK_REGISTER = 'KEYCLOAK_REGISTER';

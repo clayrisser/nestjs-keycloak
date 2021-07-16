@@ -4,7 +4,7 @@
  * File Created: 14-07-2021 11:43:59
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 19:07:31
+ * Last Modified: 15-07-2021 19:31:00
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -115,6 +115,7 @@ export default class Register {
   }
 
   async setup() {
+    if (!this.options.register) return;
     logger.log('registering keycloak . . .');
     const data: Data = {
       roles: this.roles,

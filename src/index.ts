@@ -4,7 +4,7 @@
  * File Created: 14-07-2021 11:43:59
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 19:08:08
+ * Last Modified: 15-07-2021 19:20:02
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -35,7 +35,12 @@ import KeycloakMiddleware from './keycloak.middleware';
 import KeycloakProvider from './keycloak.provider';
 import KeycloakService from './keycloak.service';
 import Register from './register';
-import { KeycloakOptions, KeycloakAsyncOptions } from './types';
+import {
+  KeycloakOptions,
+  KeycloakAsyncOptions,
+  KEYCLOAK_OPTIONS,
+  KEYCLOAK_REGISTER
+} from './types';
 
 @Module({})
 export default class KeycloakModule implements NestModule {
@@ -111,9 +116,6 @@ export default class KeycloakModule implements NestModule {
     };
   }
 }
-
-export const KEYCLOAK_OPTIONS = 'KEYCLOAK_OPTIONS';
-export const KEYCLOAK_REGISTER = 'KEYCLOAK_REGISTER';
 
 export { KeycloakMiddleware, KeycloakProvider };
 
