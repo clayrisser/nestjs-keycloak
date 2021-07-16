@@ -4,7 +4,7 @@
  * File Created: 14-07-2021 11:43:59
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 16:30:56
+ * Last Modified: 15-07-2021 19:07:49
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -24,7 +24,7 @@
 
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
-import KeycloakService from '~/keycloak.service';
+import KeycloakService from './keycloak.service';
 
 @Injectable()
 export default class KeycloakMiddleware implements NestMiddleware {

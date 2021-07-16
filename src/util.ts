@@ -4,7 +4,7 @@
  * File Created: 15-07-2021 17:43:04
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 17:55:44
+ * Last Modified: 15-07-2021 19:07:19
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -24,7 +24,7 @@
 
 import { ExecutionContext } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { KeycloakRequest } from '~/types';
+import { KeycloakRequest } from './types';
 
 let nestjsGraphql: any;
 try {

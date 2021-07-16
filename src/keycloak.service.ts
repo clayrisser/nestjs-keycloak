@@ -4,7 +4,7 @@
  * File Created: 14-07-2021 11:43:59
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 18:33:25
+ * Last Modified: 15-07-2021 19:07:40
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -30,9 +30,9 @@ import { HttpService } from '@nestjs/axios';
 import { Injectable, Inject, Scope, ExecutionContext } from '@nestjs/common';
 import { REQUEST } from '@nestjs/core';
 import { Request, NextFunction } from 'express';
-import { KEYCLOAK, KEYCLOAK_OPTIONS } from '~/index';
-import { KeycloakOptions, KeycloakRequest, UserInfo } from '~/types';
-import { getReq } from '~/util';
+import { KEYCLOAK, KEYCLOAK_OPTIONS } from './index';
+import { KeycloakOptions, KeycloakRequest, UserInfo } from './types';
+import { getReq } from './util';
 
 @Injectable({ scope: Scope.REQUEST })
 export default class KeycloakService {

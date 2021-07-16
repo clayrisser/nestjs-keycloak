@@ -4,7 +4,7 @@
  * File Created: 14-07-2021 11:39:50
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 18:42:41
+ * Last Modified: 15-07-2021 19:06:27
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -32,11 +32,11 @@ import {
   Injectable,
   Logger
 } from '@nestjs/common';
-import KeycloakService from '~/keycloak.service';
-import { KEYCLOAK, KEYCLOAK_OPTIONS } from '~/index';
-import { KeycloakOptions } from '~/types';
-import { RESOURCE } from '~/decorators/resource.decorator';
-import { SCOPES } from '~/decorators/scopes.decorator';
+import KeycloakService from '../keycloak.service';
+import { KEYCLOAK, KEYCLOAK_OPTIONS } from '../index';
+import { KeycloakOptions } from '../types';
+import { RESOURCE } from '../decorators/resource.decorator';
+import { SCOPES } from '../decorators/scopes.decorator';
 
 declare module 'keycloak-connect' {
   interface Keycloak {

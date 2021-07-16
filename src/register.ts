@@ -4,7 +4,7 @@
  * File Created: 14-07-2021 11:43:59
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 18:58:25
+ * Last Modified: 15-07-2021 19:07:31
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -30,10 +30,10 @@ import { AxiosResponse } from 'axios';
 import { DiscoveryService, Reflector } from '@nestjs/core';
 import { HttpService } from '@nestjs/axios';
 import { InstanceWrapper } from '@nestjs/core/injector/instance-wrapper';
-import { HashMap, KeycloakOptions } from '~/types';
-import { RESOURCE } from '~/decorators/resource.decorator';
-import { ROLES } from '~/decorators/roles.decorator';
-import { SCOPES } from '~/decorators/scopes.decorator';
+import { HashMap, KeycloakOptions } from './types';
+import { RESOURCE } from './decorators/resource.decorator';
+import { ROLES } from './decorators/roles.decorator';
+import { SCOPES } from './decorators/scopes.decorator';
 
 const logger = console;
 const kcAdminClient = new KcAdminClient();

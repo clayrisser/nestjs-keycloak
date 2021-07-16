@@ -4,7 +4,7 @@
  * File Created: 14-07-2021 11:43:59
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 16:46:54
+ * Last Modified: 15-07-2021 19:08:08
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -31,11 +31,11 @@ import {
 } from '@nestjs/common';
 import { HttpModule, HttpService } from '@nestjs/axios';
 import { DiscoveryModule, DiscoveryService, Reflector } from '@nestjs/core';
-import KeycloakMiddleware from '~/keycloak.middleware';
-import KeycloakProvider from '~/keycloak.provider';
-import KeycloakService from '~/keycloak.service';
-import Register from '~/register';
-import { KeycloakOptions, KeycloakAsyncOptions } from '~/types';
+import KeycloakMiddleware from './keycloak.middleware';
+import KeycloakProvider from './keycloak.provider';
+import KeycloakService from './keycloak.service';
+import Register from './register';
+import { KeycloakOptions, KeycloakAsyncOptions } from './types';
 
 @Module({})
 export default class KeycloakModule implements NestModule {
@@ -117,4 +117,4 @@ export const KEYCLOAK_REGISTER = 'KEYCLOAK_REGISTER';
 
 export { KeycloakMiddleware, KeycloakProvider };
 
-export * from '~/keycloak.provider';
+export * from './keycloak.provider';
