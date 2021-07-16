@@ -1,6 +1,6 @@
 {
   "name": "nestjs-keycloak",
-  "version": "2.0.0-rc.4",
+  "version": "2.0.0-rc.5",
   "description": "nestjs module for keycloak",
   "sideEffects": false,
   "keywords": [
@@ -53,15 +53,16 @@
     "@prisma/client": "^2.27.0",
     "axios": "^0.21.1",
     "core-js": "^3.15.2",
+    "express": "^4.17.1",
     "express-session": "^1.17.2",
     "keycloak-admin": "^1.14.18",
     "keycloak-connect": "^14.0.0",
     "lodash.difference": "^4.5.0",
-    "qs": "^6.10.1"
+    "qs": "^6.10.1",
+    "type-graphql": "^1.1.1"
   },
   "peerDependencies": {
-    "@nestjs/graphql": "^8.0.2",
-    "express": "^4.17.1"
+    "@nestjs/graphql": "^8.0.2"
   },
   "devDependencies": {
     "@babel/cli": "^7.14.5",
@@ -91,7 +92,6 @@
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-import": "^2.23.4",
     "eslint-plugin-spellcheck": "^0.0.19",
-    "express": "^4.17.1",
     "jest": "^27.0.6",
     "jest-sonar-reporter": "^2.0.0",
     "lockfile-lint": "^4.6.2",

@@ -4,7 +4,7 @@
  * File Created: 14-07-2021 11:43:59
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 19:31:00
+ * Last Modified: 15-07-2021 21:43:07
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -30,9 +30,9 @@ import { AxiosResponse } from 'axios';
 import { DiscoveryService, Reflector } from '@nestjs/core';
 import { HttpService } from '@nestjs/axios';
 import { InstanceWrapper } from '@nestjs/core/injector/instance-wrapper';
+import { AUTHORIZED } from './decorators/authorized.decorator';
 import { HashMap, KeycloakOptions } from './types';
 import { RESOURCE } from './decorators/resource.decorator';
-import { ROLES } from './decorators/roles.decorator';
 import { SCOPES } from './decorators/scopes.decorator';
 
 const logger = console;
@@ -67,11 +67,11 @@ export default class Register {
       ...this.controllers.reduce(
         (roles: Set<string>, controller: InstanceWrapper) => {
           const methods = getMethods(controller.instance);
-          const values = this.reflector.getAllAndMerge(ROLES, [
+          const values = this.reflector.getAllAndMerge(AUTHORIZED, [
             controller.metatype,
             ...methods
           ]);
-          return new Set([...roles, ...values]);
+          return new Set([...roles, ...values.flat()]);
         },
         new Set()
       )

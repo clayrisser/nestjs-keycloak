@@ -4,7 +4,7 @@
  * File Created: 14-07-2021 11:43:59
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 19:21:02
+ * Last Modified: 15-07-2021 21:54:13
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -37,7 +37,7 @@ import {
   KEYCLOAK_OPTIONS
 } from './types';
 import { KEYCLOAK } from './keycloak.provider';
-import { getReq } from './util';
+import { getReq, GraphqlContext } from './util';
 
 @Injectable({ scope: Scope.REQUEST })
 export default class KeycloakService {
@@ -46,7 +46,10 @@ export default class KeycloakService {
     @Inject(KEYCLOAK) private readonly keycloak: Keycloak,
     private readonly httpService: HttpService,
     @Inject(REQUEST)
-    reqOrExecutionContext: KeycloakRequest<Request> | ExecutionContext
+    reqOrExecutionContext:
+      | KeycloakRequest<Request>
+      | ExecutionContext
+      | GraphqlContext
   ) {
     this.req = getReq(reqOrExecutionContext);
   }
@@ -270,9 +273,7 @@ export default class KeycloakService {
     this._initialized = true;
   }
 
-  async isAuthorizedByRoles(
-    roles: string | string[] | string[][]
-  ): Promise<boolean> {
+  async isAuthorizedByRoles(roles: (string | string[])[]): Promise<boolean> {
     await this.init();
     const accessToken = await this.getAccessToken();
     if (!(await this.isAuthenticated())) return false;

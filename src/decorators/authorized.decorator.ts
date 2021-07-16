@@ -1,10 +1,10 @@
 /**
- * File: /.eslintrc.js
+ * File: /src/decorators/authorized.decorator.ts
  * Project: nestjs-keycloak
  * File Created: 14-07-2021 11:43:57
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 16:23:09
+ * Last Modified: 15-07-2021 21:36:26
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -24,8 +24,7 @@
 
 import { SetMetadata } from '@nestjs/common';
 
-export const PUBLIC = 'public';
+export const AUTHORIZED = 'authorized';
 
-export const Public = (...scopes: string[]) => {
-  return SetMetadata(PUBLIC, scopes);
-};
+export const Authorized = (...roles: (string | string[])[]) =>
+  SetMetadata(AUTHORIZED, roles);

@@ -1,10 +1,10 @@
 /**
- * File: /.eslintrc.js
+ * File: /src/typegraphql/index.ts
  * Project: nestjs-keycloak
- * File Created: 14-07-2021 11:43:57
+ * File Created: 15-07-2021 21:45:24
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 16:23:09
+ * Last Modified: 15-07-2021 22:03:00
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -22,8 +22,8 @@
  * limitations under the License.
  */
 
-import { SetMetadata } from '@nestjs/common';
+import AuthCheckerProvider from './authChecker.provider';
 
-export const ROLES = 'roles';
+export { AuthCheckerProvider };
 
-export const Roles = (...roles: string[]) => SetMetadata(ROLES, roles);
+export * from './authChecker.provider';

@@ -4,7 +4,7 @@
  * File Created: 14-07-2021 11:43:59
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 19:22:08
+ * Last Modified: 15-07-2021 21:44:31
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -35,9 +35,8 @@ import {
 import KeycloakService from '../keycloak.service';
 import { KEYCLOAK } from '../keycloak.provider';
 import { KEYCLOAK_OPTIONS, KeycloakOptions } from '../types';
-import { PUBLIC } from '../decorators/public.decorator';
 import { RESOURCE } from '../decorators/resource.decorator';
-import { ROLES } from '../decorators/roles.decorator';
+import { AUTHORIZED } from '../decorators/authorized.decorator';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -57,19 +56,16 @@ export class AuthGuard implements CanActivate {
       this.httpService,
       context
     );
+    const roles = this.getRoles(context);
+    if (!roles.length) return true;
     const username = (await keycloakService.getUserInfo())?.preferredUsername;
     if (!username) return false;
-    const isPublic = this.getIsPublic(context);
-    if (isPublic) return true;
-    const roles = this.getRoles(context);
     const resource = this.getResource(context);
-    if (roles.length) {
-      this.logger.verbose(
-        `resource${
-          resource ? `'${resource}' ` : ''
-        } for '${username}' requires roles [ ${roles.join(' | ')} ]`
-      );
-    }
+    this.logger.verbose(
+      `resource${
+        resource ? `'${resource}' ` : ''
+      } for '${username}' requires roles [ ${roles.join(' | ')} ]`
+    );
     if (await keycloakService.isAuthorizedByRoles(roles)) {
       this.logger.verbose(`authorization for '${username}' granted`);
       return true;
@@ -78,26 +74,18 @@ export class AuthGuard implements CanActivate {
     return false;
   }
 
-  private getIsPublic(context: ExecutionContext) {
-    const handlerIsPublic = !!this.reflector.get<string>(
-      PUBLIC,
-      context.getHandler()
-    );
-    const classIsPublic = !!this.reflector.get<string>(
-      PUBLIC,
-      context.getClass()
-    );
-    return handlerIsPublic || classIsPublic;
-  }
-
-  private getRoles(context: ExecutionContext) {
+  private getRoles(context: ExecutionContext): (string | string[])[] {
     const handlerRoles =
-      this.reflector.get<(string | string[])[]>(ROLES, context.getHandler()) ||
-      [];
+      this.reflector.get<(string | string[])[]>(
+        AUTHORIZED,
+        context.getHandler()
+      ) || [];
     const classRoles =
-      this.reflector.get<(string | string[])[]>(ROLES, context.getClass()) ||
-      [];
-    return [...new Set([...handlerRoles.flat(), ...classRoles.flat()])];
+      this.reflector.get<(string | string[])[]>(
+        AUTHORIZED,
+        context.getClass()
+      ) || [];
+    return [...new Set([...handlerRoles, ...classRoles])];
   }
 
   private getResource(context: ExecutionContext) {
