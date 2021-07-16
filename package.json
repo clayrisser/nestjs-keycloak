@@ -2,7 +2,6 @@
   "name": "nestjs-keycloak",
   "version": "2.0.0-rc.0",
   "description": "nestjs module for keycloak",
-  "private": true,
   "sideEffects": false,
   "keywords": [
     "nestjs-keycloak"
