@@ -4,7 +4,7 @@
  * File Created: 15-07-2021 21:45:24
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 22:27:46
+ * Last Modified: 15-07-2021 23:00:06
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -23,8 +23,10 @@
  */
 
 import AuthCheckerProvider from './authChecker.provider';
+import ResourceGuardProvider from './resourceGuard.provider';
 
-export { AuthCheckerProvider };
+export { AuthCheckerProvider, ResourceGuardProvider };
 
 export * from './authChecker.provider';
 export * from './decorators';
+export * from './resourceGuard.provider';

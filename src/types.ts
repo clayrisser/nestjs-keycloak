@@ -4,7 +4,7 @@
  * File Created: 14-07-2021 11:43:59
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 19:19:54
+ * Last Modified: 15-07-2021 22:41:42
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -26,6 +26,7 @@ import { ModuleMetadata } from '@nestjs/common/interfaces';
 
 type Grant = import('keycloak-connect').Grant;
 type Request = import('express').Request;
+type Response = import('express').Response;
 
 export interface HashMap<T = any> {
   [key: string]: T;
@@ -76,3 +77,15 @@ export interface Kauth {
 
 export const KEYCLOAK_OPTIONS = 'KEYCLOAK_OPTIONS';
 export const KEYCLOAK_REGISTER = 'KEYCLOAK_REGISTER';
+
+export interface TypeGraphqlMeta {
+  resource?: string;
+  scopes?: string[];
+  [key: string]: any;
+}
+
+export interface GraphqlContext extends HashMap {
+  req?: Request;
+  res?: Response;
+  typegraphqlMeta?: TypeGraphqlMeta;
+}

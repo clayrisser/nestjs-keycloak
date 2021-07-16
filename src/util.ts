@@ -4,7 +4,7 @@
  * File Created: 15-07-2021 17:43:04
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 21:53:51
+ * Last Modified: 15-07-2021 22:40:13
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -24,7 +24,7 @@
 
 import { ExecutionContext } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { KeycloakRequest, HashMap } from './types';
+import { KeycloakRequest, GraphqlContext } from './types';
 
 let nestjsGraphql: any;
 try {
@@ -99,9 +99,4 @@ export function getRes(
 
 export enum ContextType {
   Graphql = 'graphql'
-}
-
-export interface GraphqlContext extends HashMap {
-  req?: Request;
-  res?: Response;
 }

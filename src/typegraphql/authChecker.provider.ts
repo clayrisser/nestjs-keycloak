@@ -4,7 +4,7 @@
  * File Created: 15-07-2021 21:45:29
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 22:15:43
+ * Last Modified: 15-07-2021 22:47:28
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -26,7 +26,7 @@ import { AuthChecker, ResolverData } from 'type-graphql';
 import { Keycloak } from 'keycloak-connect';
 import { Logger, FactoryProvider } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
-import { KeycloakOptions, KEYCLOAK_OPTIONS } from '../types';
+import { KeycloakOptions, KEYCLOAK_OPTIONS, GraphqlContext } from '../types';
 import { KEYCLOAK } from '../keycloak.provider';
 import KeycloakService from '../keycloak.service';
 
@@ -41,8 +41,8 @@ const AuthCheckerProvider: FactoryProvider<AuthChecker> = {
     keycloak: Keycloak,
     httpService: HttpService
   ) => {
-    return async <C>(
-      { context }: ResolverData<C>,
+    return async (
+      { context }: ResolverData<GraphqlContext>,
       roles: (string | string[])[]
     ) => {
       const keycloakService = new KeycloakService(
@@ -53,8 +53,7 @@ const AuthCheckerProvider: FactoryProvider<AuthChecker> = {
       );
       const username = (await keycloakService.getUserInfo())?.preferredUsername;
       if (!username) return false;
-      // TODO: get resource
-      const resource = null;
+      const resource = context.typegraphqlMeta?.resource;
       logger.verbose(
         `resource${
           resource ? `'${resource}' ` : ''

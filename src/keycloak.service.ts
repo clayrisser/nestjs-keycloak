@@ -4,7 +4,7 @@
  * File Created: 14-07-2021 11:43:59
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 21:54:13
+ * Last Modified: 15-07-2021 23:02:24
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -31,13 +31,14 @@ import { Injectable, Inject, Scope, ExecutionContext } from '@nestjs/common';
 import { REQUEST } from '@nestjs/core';
 import { Request, NextFunction } from 'express';
 import {
+  GraphqlContext,
+  KEYCLOAK_OPTIONS,
   KeycloakOptions,
   KeycloakRequest,
-  UserInfo,
-  KEYCLOAK_OPTIONS
+  UserInfo
 } from './types';
 import { KEYCLOAK } from './keycloak.provider';
-import { getReq, GraphqlContext } from './util';
+import { getReq } from './util';
 
 @Injectable({ scope: Scope.REQUEST })
 export default class KeycloakService {

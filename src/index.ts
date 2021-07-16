@@ -4,7 +4,7 @@
  * File Created: 14-07-2021 11:43:59
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 22:27:07
+ * Last Modified: 15-07-2021 23:01:27
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -31,11 +31,11 @@ import {
 } from '@nestjs/common';
 import { HttpModule, HttpService } from '@nestjs/axios';
 import { DiscoveryModule, DiscoveryService, Reflector } from '@nestjs/core';
-import AuthCheckerProvider from './typegraphql/authChecker.provider';
 import KeycloakMiddleware from './keycloak.middleware';
 import KeycloakProvider from './keycloak.provider';
 import KeycloakService from './keycloak.service';
 import Register from './register';
+import { AuthCheckerProvider, ResourceGuardProvider } from './typegraphql';
 import {
   KeycloakOptions,
   KeycloakAsyncOptions,
@@ -61,6 +61,7 @@ export default class KeycloakModule implements NestModule {
         AuthCheckerProvider,
         KeycloakProvider,
         KeycloakService,
+        ResourceGuardProvider,
         {
           provide: KEYCLOAK_OPTIONS,
           useValue: options
@@ -70,8 +71,9 @@ export default class KeycloakModule implements NestModule {
       exports: [
         AuthCheckerProvider,
         KEYCLOAK_OPTIONS,
+        KeycloakProvider,
         KeycloakService,
-        KeycloakProvider
+        ResourceGuardProvider
       ]
     };
   }
@@ -84,16 +86,18 @@ export default class KeycloakModule implements NestModule {
       imports: [...KeycloakModule.imports, ...(asyncOptions.imports || [])],
       providers: [
         AuthCheckerProvider,
-        KeycloakService,
+        KeycloakModule.createKeycloakRegisterProvider(),
         KeycloakModule.createOptionsProvider(asyncOptions),
         KeycloakProvider,
-        KeycloakModule.createKeycloakRegisterProvider()
+        KeycloakService,
+        ResourceGuardProvider
       ],
       exports: [
         AuthCheckerProvider,
         KEYCLOAK_OPTIONS,
+        KeycloakProvider,
         KeycloakService,
-        KeycloakProvider
+        ResourceGuardProvider
       ]
     };
   }
