@@ -4,7 +4,7 @@
  * File Created: 14-07-2021 11:43:59
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 19:20:02
+ * Last Modified: 15-07-2021 22:27:07
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -31,6 +31,7 @@ import {
 } from '@nestjs/common';
 import { HttpModule, HttpService } from '@nestjs/axios';
 import { DiscoveryModule, DiscoveryService, Reflector } from '@nestjs/core';
+import AuthCheckerProvider from './typegraphql/authChecker.provider';
 import KeycloakMiddleware from './keycloak.middleware';
 import KeycloakProvider from './keycloak.provider';
 import KeycloakService from './keycloak.service';
@@ -57,15 +58,21 @@ export default class KeycloakModule implements NestModule {
       module: KeycloakModule,
       imports: KeycloakModule.imports,
       providers: [
-        KeycloakService,
+        AuthCheckerProvider,
         KeycloakProvider,
+        KeycloakService,
         {
           provide: KEYCLOAK_OPTIONS,
           useValue: options
         },
         KeycloakModule.createKeycloakRegisterProvider()
       ],
-      exports: [KEYCLOAK_OPTIONS, KeycloakService, KeycloakProvider]
+      exports: [
+        AuthCheckerProvider,
+        KEYCLOAK_OPTIONS,
+        KeycloakService,
+        KeycloakProvider
+      ]
     };
   }
 
@@ -76,12 +83,18 @@ export default class KeycloakModule implements NestModule {
       module: KeycloakModule,
       imports: [...KeycloakModule.imports, ...(asyncOptions.imports || [])],
       providers: [
+        AuthCheckerProvider,
         KeycloakService,
         KeycloakModule.createOptionsProvider(asyncOptions),
         KeycloakProvider,
         KeycloakModule.createKeycloakRegisterProvider()
       ],
-      exports: [KEYCLOAK_OPTIONS, KeycloakService, KeycloakProvider]
+      exports: [
+        AuthCheckerProvider,
+        KEYCLOAK_OPTIONS,
+        KeycloakService,
+        KeycloakProvider
+      ]
     };
   }
 
@@ -119,4 +132,5 @@ export default class KeycloakModule implements NestModule {
 
 export { KeycloakMiddleware, KeycloakProvider };
 
+export * from './guards';
 export * from './keycloak.provider';

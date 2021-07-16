@@ -4,7 +4,7 @@
  * File Created: 15-07-2021 21:45:29
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 22:02:25
+ * Last Modified: 15-07-2021 22:15:43
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -24,13 +24,13 @@
 
 import { AuthChecker, ResolverData } from 'type-graphql';
 import { Keycloak } from 'keycloak-connect';
-import { FactoryProvider } from '@nestjs/common';
+import { Logger, FactoryProvider } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { KeycloakOptions, KEYCLOAK_OPTIONS } from '../types';
 import { KEYCLOAK } from '../keycloak.provider';
 import KeycloakService from '../keycloak.service';
 
-const logger = console;
+const logger = new Logger('AuthChecker');
 export const AUTH_CHECKER = 'AUTH_CHECKER';
 
 const AuthCheckerProvider: FactoryProvider<AuthChecker> = {
@@ -55,18 +55,16 @@ const AuthCheckerProvider: FactoryProvider<AuthChecker> = {
       if (!username) return false;
       // TODO: get resource
       const resource = null;
-      // TODO: use real logger
-      logger.info(
+      logger.verbose(
         `resource${
           resource ? `'${resource}' ` : ''
         } for '${username}' requires roles [ ${roles.join(' | ')} ]`
       );
       if (await keycloakService.isAuthorizedByRoles(roles)) {
-        logger.info(`authorization for '${username}' granted`);
+        logger.verbose(`authorization for '${username}' granted`);
         return true;
       }
-      // TODO: use real logger
-      logger.info(`authorization for '${username}' denied`);
+      logger.verbose(`authorization for '${username}' denied`);
       return false;
     };
   }

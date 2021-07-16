@@ -4,7 +4,7 @@
  * File Created: 14-07-2021 11:43:59
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 21:44:31
+ * Last Modified: 15-07-2021 22:25:28
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -35,8 +35,7 @@ import {
 import KeycloakService from '../keycloak.service';
 import { KEYCLOAK } from '../keycloak.provider';
 import { KEYCLOAK_OPTIONS, KeycloakOptions } from '../types';
-import { RESOURCE } from '../decorators/resource.decorator';
-import { AUTHORIZED } from '../decorators/authorized.decorator';
+import { RESOURCE, AUTHORIZED } from '../decorators';
 
 @Injectable()
 export class AuthGuard implements CanActivate {

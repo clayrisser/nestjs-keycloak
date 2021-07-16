@@ -1,10 +1,10 @@
 /**
- * File: /src/typegraphql/index.ts
+ * File: /src/typegraphql/decorators/resource.decorator.ts
  * Project: nestjs-keycloak
- * File Created: 15-07-2021 21:45:24
+ * File Created: 15-07-2021 22:17:00
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 22:27:46
+ * Last Modified: 15-07-2021 22:31:18
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -22,9 +22,9 @@
  * limitations under the License.
  */
 
-import AuthCheckerProvider from './authChecker.provider';
+import { createMethodDecorator, NextFn, ResolverData } from 'type-graphql';
 
-export { AuthCheckerProvider };
-
-export * from './authChecker.provider';
-export * from './decorators';
+export const Resource = (_resource: string) =>
+  createMethodDecorator((_action: ResolverData, next: NextFn) => {
+    return next();
+  });
