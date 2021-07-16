@@ -11,7 +11,7 @@
     "url": "https://github.com/silicon-hills/nestjs-keycloak/issues",
     "email": "support@siliconhills.dev"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "author": {
     "name": "SiliconHills LLC",
     "email": "support@siliconhills.dev",
