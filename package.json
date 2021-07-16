@@ -1,15 +1,15 @@
 {
-  "name": "whisker-keycloak",
-  "version": "0.0.1",
+  "name": "nestjs-keycloak",
+  "version": "2.0.0-rc.0",
   "description": "nestjs module for keycloak",
   "private": true,
   "sideEffects": false,
   "keywords": [
-    "whisker-keycloak"
+    "nestjs-keycloak"
   ],
-  "homepage": "https://github.com/silicon-hills/whisker-keycloak",
+  "homepage": "https://github.com/silicon-hills/nestjs-keycloak",
   "bugs": {
-    "url": "https://github.com/silicon-hills/whisker-keycloak/issues",
+    "url": "https://github.com/silicon-hills/nestjs-keycloak/issues",
     "email": "support@siliconhills.dev"
   },
   "license": "MIT",
@@ -27,7 +27,7 @@
   "main": "lib/index.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/silicon-hills/whisker-keycloak"
+    "url": "https://github.com/silicon-hills/nestjs-keycloak"
   },
   "scripts": {
     "build": "make -s build",
@@ -57,10 +57,11 @@
     "express-session": "^1.17.2",
     "keycloak-admin": "^1.14.18",
     "keycloak-connect": "^14.0.0",
-    "lodash": "^4.17.21",
+    "lodash.difference": "^4.5.0",
     "qs": "^6.10.1"
   },
   "peerDependencies": {
+    "@nestjs/graphql": "^8.0.2",
     "express": "^4.17.1"
   },
   "devDependencies": {
@@ -74,9 +75,10 @@
     "@babel/plugin-transform-runtime": "^7.14.5",
     "@babel/preset-env": "^7.14.7",
     "@babel/preset-typescript": "^7.14.5",
+    "@nestjs/graphql": "^8.0.2",
     "@types/express-session": "^1.17.4",
     "@types/jest": "^26.0.24",
-    "@types/lodash": "^4.14.171",
+    "@types/lodash.difference": "^4.5.6",
     "@typescript-eslint/eslint-plugin": "^4.28.3",
     "@typescript-eslint/parser": "^4.28.3",
     "babel-loader": "^8.2.2",

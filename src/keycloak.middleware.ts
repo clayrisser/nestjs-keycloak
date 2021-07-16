@@ -1,10 +1,10 @@
 /**
  * File: /src/keycloak.middleware.ts
- * Project: whisker-keycloak
+ * Project: nestjs-keycloak
  * File Created: 14-07-2021 11:43:59
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 15:58:52
+ * Last Modified: 15-07-2021 16:30:56
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -24,15 +24,15 @@
 
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
-import Auth from '~/auth';
+import KeycloakService from '~/keycloak.service';
 
 @Injectable()
 export default class KeycloakMiddleware implements NestMiddleware {
-  constructor(private auth: Auth) {}
+  constructor(private readonly keycloakService: KeycloakService) {}
 
   async use(_req: Request, _res: Response, next: NextFunction) {
     try {
-      await this.auth.init();
+      await this.keycloakService.init();
       return next();
     } catch (err) {
       return next(err);

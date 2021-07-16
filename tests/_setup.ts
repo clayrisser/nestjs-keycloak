@@ -1,10 +1,10 @@
 /**
- * File: /tests/_setup.ts
- * Project: whisker-keycloak
+ * File: /.eslintrc.js
+ * Project: nestjs-keycloak
  * File Created: 14-07-2021 11:43:59
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 14-07-2021 11:46:26
+ * Last Modified: 15-07-2021 16:23:09
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021

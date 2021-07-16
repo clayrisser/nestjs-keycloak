@@ -1,10 +1,10 @@
 /**
  * File: /src/index.ts
- * Project: whisker-keycloak
+ * Project: nestjs-keycloak
  * File Created: 14-07-2021 11:43:59
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 14-07-2021 11:46:02
+ * Last Modified: 15-07-2021 16:46:54
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -23,20 +23,19 @@
  */
 
 import {
-  MiddlewareConsumer,
-  HttpService,
-  Module,
   DynamicModule,
+  MiddlewareConsumer,
+  Module,
   NestModule,
-  RequestMethod,
-  HttpModule
+  RequestMethod
 } from '@nestjs/common';
+import { HttpModule, HttpService } from '@nestjs/axios';
 import { DiscoveryModule, DiscoveryService, Reflector } from '@nestjs/core';
 import KeycloakMiddleware from '~/keycloak.middleware';
 import KeycloakProvider from '~/keycloak.provider';
 import KeycloakService from '~/keycloak.service';
 import Register from '~/register';
-import { Options } from '~/types';
+import { KeycloakOptions, KeycloakAsyncOptions } from '~/types';
 
 @Module({})
 export default class KeycloakModule implements NestModule {
@@ -48,7 +47,7 @@ export default class KeycloakModule implements NestModule {
       .forRoutes({ path: '*', method: RequestMethod.ALL });
   }
 
-  public static register(options: Options): DynamicModule {
+  public static register(options: KeycloakOptions): DynamicModule {
     return {
       module: KeycloakModule,
       imports: KeycloakModule.imports,
@@ -59,9 +58,36 @@ export default class KeycloakModule implements NestModule {
           provide: KEYCLOAK_OPTIONS,
           useValue: options
         },
-        this.createKeycloakRegisterProvider()
+        KeycloakModule.createKeycloakRegisterProvider()
       ],
       exports: [KEYCLOAK_OPTIONS, KeycloakService, KeycloakProvider]
+    };
+  }
+
+  public static registerAsync(
+    asyncOptions: KeycloakAsyncOptions
+  ): DynamicModule {
+    return {
+      module: KeycloakModule,
+      imports: [...KeycloakModule.imports, ...(asyncOptions.imports || [])],
+      providers: [
+        KeycloakService,
+        KeycloakModule.createOptionsProvider(asyncOptions),
+        KeycloakProvider,
+        KeycloakModule.createKeycloakRegisterProvider()
+      ],
+      exports: [KEYCLOAK_OPTIONS, KeycloakService, KeycloakProvider]
+    };
+  }
+
+  private static createOptionsProvider(asyncOptions: KeycloakAsyncOptions) {
+    if (!asyncOptions.useFactory) {
+      throw new Error("registerAsync must have 'useFactory'");
+    }
+    return {
+      inject: asyncOptions.inject || [],
+      provide: KEYCLOAK_OPTIONS,
+      useFactory: asyncOptions.useFactory
     };
   }
 
@@ -69,7 +95,7 @@ export default class KeycloakModule implements NestModule {
     return {
       provide: KEYCLOAK_REGISTER,
       async useFactory(
-        options: Options,
+        options: KeycloakOptions,
         httpService: HttpService,
         discoveryService: DiscoveryService,
         reflector: Reflector
@@ -88,5 +114,7 @@ export default class KeycloakModule implements NestModule {
 
 export const KEYCLOAK_OPTIONS = 'KEYCLOAK_OPTIONS';
 export const KEYCLOAK_REGISTER = 'KEYCLOAK_REGISTER';
-export * from './keycloak.provider';
+
 export { KeycloakMiddleware, KeycloakProvider };
+
+export * from '~/keycloak.provider';

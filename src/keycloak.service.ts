@@ -1,10 +1,10 @@
 /**
  * File: /src/keycloak.service.ts
- * Project: whisker-keycloak
+ * Project: nestjs-keycloak
  * File Created: 14-07-2021 11:43:59
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 16:08:16
+ * Last Modified: 15-07-2021 18:33:25
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -25,21 +25,28 @@
 import Token from 'keycloak-connect/middleware/auth-utils/token';
 import qs from 'qs';
 import { AxiosResponse } from 'axios';
-import { Injectable, Inject, Scope, HttpService } from '@nestjs/common';
 import { Grant, Keycloak } from 'keycloak-connect';
+import { HttpService } from '@nestjs/axios';
+import { Injectable, Inject, Scope, ExecutionContext } from '@nestjs/common';
 import { REQUEST } from '@nestjs/core';
-import { Request } from 'express';
-import { Options, KeycloakRequest, UserInfo } from '~/types';
+import { Request, NextFunction } from 'express';
 import { KEYCLOAK, KEYCLOAK_OPTIONS } from '~/index';
+import { KeycloakOptions, KeycloakRequest, UserInfo } from '~/types';
+import { getReq } from '~/util';
 
 @Injectable({ scope: Scope.REQUEST })
 export default class KeycloakService {
   constructor(
-    @Inject(KEYCLOAK_OPTIONS) public options: Options,
-    @Inject(KEYCLOAK) private keycloak: Keycloak,
-    @Inject(REQUEST) private readonly req: KeycloakRequest<Request>,
-    private readonly httpService: HttpService
-  ) {}
+    @Inject(KEYCLOAK_OPTIONS) private readonly options: KeycloakOptions,
+    @Inject(KEYCLOAK) private readonly keycloak: Keycloak,
+    private readonly httpService: HttpService,
+    @Inject(REQUEST)
+    reqOrExecutionContext: KeycloakRequest<Request> | ExecutionContext
+  ) {
+    this.req = getReq(reqOrExecutionContext);
+  }
+
+  req: KeycloakRequest<Request>;
 
   private logger = console;
 
@@ -84,8 +91,8 @@ export default class KeycloakService {
     return this._refreshToken;
   }
 
-  get grant(): Grant | undefined {
-    return this.req.kauth?.grant;
+  get grant(): Grant | null {
+    return this.req.kauth?.grant || null;
   }
 
   async getAccessToken(): Promise<Token | null> {
@@ -258,25 +265,25 @@ export default class KeycloakService {
     this._initialized = true;
   }
 
-  async isAuthorizedByRole(roles: string[]) {
-    await this.init();
-    // eslint-disable-next-line no-restricted-syntax
-    for (const role of roles) {
-      if (await this.hasRole(role)) return true;
-    }
-    return false;
-  }
-
-  async hasRole(role: string): Promise<boolean> {
+  async isAuthorizedByRoles(
+    roles: string | string[] | string[][]
+  ): Promise<boolean> {
     await this.init();
     const accessToken = await this.getAccessToken();
-    return this.isAuthenticated() && !!accessToken?.hasRole(role);
+    if (!(await this.isAuthenticated())) return false;
+    const rolesArr = Array.isArray(roles) ? roles : [roles];
+    if (!rolesArr.length) return true;
+    return rolesArr.some((role: string | string[]) =>
+      Array.isArray(role)
+        ? role.every((innerRole: string) => accessToken?.hasRole(innerRole))
+        : accessToken?.hasRole(role)
+    );
   }
 
   async isAuthenticated(): Promise<boolean> {
     await this.init();
     const accessToken = await this.getAccessToken();
-    return !!accessToken && !accessToken?.isExpired();
+    return !this.grant?.isExpired() && !accessToken?.isExpired();
   }
 
   async authenticate(
@@ -331,6 +338,20 @@ export default class KeycloakService {
       access_token: accessToken
     });
     if (grant) this.req.kauth.grant = grant;
+  }
+
+  async enforce(permissions: string[]) {
+    await this.init();
+    return new Promise<boolean>((resolve) => {
+      return this.keycloak.enforcer(permissions)(
+        this.req,
+        {},
+        (req: KeycloakRequest<Request>, _res: {}, _next: NextFunction) => {
+          if (req.resourceDenied) return resolve(false);
+          return resolve(true);
+        }
+      );
+    });
   }
 }
 

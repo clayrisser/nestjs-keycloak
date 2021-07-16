@@ -1,10 +1,10 @@
 /**
  * File: /src/guards/resource.guard.ts
- * Project: whisker-keycloak
+ * Project: nestjs-keycloak
  * File Created: 14-07-2021 11:39:50
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 14-07-2021 11:45:59
+ * Last Modified: 15-07-2021 18:42:41
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -22,9 +22,9 @@
  * limitations under the License.
  */
 
-import KeycloakConnect, { Keycloak } from 'keycloak-connect';
+import { HttpService } from '@nestjs/axios';
+import { Keycloak } from 'keycloak-connect';
 import { Reflector } from '@nestjs/core';
-import { Response } from 'express';
 import {
   CanActivate,
   ExecutionContext,
@@ -32,10 +32,11 @@ import {
   Injectable,
   Logger
 } from '@nestjs/common';
-import { KEYCLOAK_INSTANCE } from '../constants';
-import { RESOURCE } from '../decorators/resource.decorator';
-import { SCOPES } from '../decorators/scopes.decorator';
-import { getReq } from '../utils';
+import KeycloakService from '~/keycloak.service';
+import { KEYCLOAK, KEYCLOAK_OPTIONS } from '~/index';
+import { KeycloakOptions } from '~/types';
+import { RESOURCE } from '~/decorators/resource.decorator';
+import { SCOPES } from '~/decorators/scopes.decorator';
 
 declare module 'keycloak-connect' {
   interface Keycloak {
@@ -50,50 +51,50 @@ export class ResourceGuard implements CanActivate {
   logger = new Logger(ResourceGuard.name);
 
   constructor(
-    @Inject(KEYCLOAK_INSTANCE)
-    private keycloak: KeycloakConnect.Keycloak,
+    @Inject(KEYCLOAK_OPTIONS) private options: KeycloakOptions,
+    @Inject(KEYCLOAK) private readonly keycloak: Keycloak,
+    private readonly httpService: HttpService,
     private readonly reflector: Reflector
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const resource = this.reflector.get<string>(RESOURCE, context.getClass());
+    const keycloakService = new KeycloakService(
+      this.options,
+      this.keycloak,
+      this.httpService,
+      context
+    );
+    const resource = this.getResource(context);
+    if (!resource) return true;
+    const username = (await keycloakService.getUserInfo())?.preferredUsername;
+    if (!username) return false;
+    const scopes = this.getScopes(context);
+    if (!scopes.length) {
+      this.logger.verbose(`resource '${resource}' granted to '${username}'`);
+      return true;
+    }
+    this.logger.verbose(
+      `protecting resource '${resource}' with scopes [ ${scopes.join(', ')} ]`
+    );
+    if (!scopes.length) return true;
+    const permissions = scopes.map((scope) => `${resource}:${scope}`);
+    if (await keycloakService.enforce(permissions)) {
+      this.logger.verbose(`resource '${resource}' granted to '${username}'`);
+      return true;
+    }
+    this.logger.verbose(`resource '${resource}' denied to '${username}'`);
+    return false;
+  }
+
+  private getScopes(context: ExecutionContext) {
     const handlerScopes =
       this.reflector.get<string[]>(SCOPES, context.getHandler()) || [];
     const classScopes =
       this.reflector.get<string[]>(SCOPES, context.getClass()) || [];
-    const scopes = [...new Set([...handlerScopes, ...classScopes])];
-    if (!resource || !scopes.length) return true;
-    this.logger.verbose(
-      `Protecting resource '${resource}' with scopes: [ ${scopes} ]`
-    );
-    if (!scopes.length) return true;
-    const req = getReq(context);
-    if (!req.userInfo) return false;
-    const permissions = scopes.map((scope) => `${resource}:${scope}`);
-    const res: Response = context.switchToHttp().getResponse();
-    const username = req.userInfo?.preferred_username;
-    const enforcerFn = createEnforcerContext(req, res);
-    const isAllowed = await enforcerFn(this.keycloak, permissions);
-    if (!isAllowed) {
-      this.logger.verbose(`Resource '${resource}' denied to '${username}'.`);
-      return false;
-    }
-    this.logger.verbose(`Resource '${resource}' granted to '${username}'.`);
-    return true;
+    return [...new Set([...handlerScopes, ...classScopes])];
   }
-}
 
-function createEnforcerContext(req: any, res: any) {
-  req.kauth = { grant: req.grant };
-  return (keycloak: Keycloak, permissions: string[]) => {
-    return new Promise<boolean>((resolve) => {
-      return keycloak.enforcer(permissions)(req, res, (_next: any) => {
-        if (req.resourceDenied) {
-          resolve(false);
-        } else {
-          resolve(true);
-        }
-      });
-    });
-  };
+  private getResource(context: ExecutionContext) {
+    return this.reflector.get<string>(RESOURCE, context.getClass());
+  }
 }

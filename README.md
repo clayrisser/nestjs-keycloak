@@ -1,6 +1,6 @@
-# whisker-keycloak
+# nestjs-keycloak
 
-[![GitHub stars](https://img.shields.io/github/stars/silicon-hills/whisker-keycloak.svg?style=social&label=Stars)](https://github.com/silicon-hills/whisker-keycloak)
+[![GitHub stars](https://img.shields.io/github/stars/silicon-hills/nestjs-keycloak.svg?style=social&label=Stars)](https://github.com/silicon-hills/nestjs-keycloak)
 
 > nestjs module for keycloak
 
@@ -19,29 +19,29 @@ npm install --save @whisker/keycloak
 
 ## Usage
 
-[Contribute](https://github.com/silicon-hills/whisker-keycloak/blob/master/CONTRIBUTING.md) usage docs
+[Contribute](https://github.com/silicon-hills/nestjs-keycloak/blob/master/CONTRIBUTING.md) usage docs
 
 ## Support
 
-Submit an [issue](https://github.com/silicon-hills/whisker-keycloak/issues/new)
+Submit an [issue](https://github.com/silicon-hills/nestjs-keycloak/issues/new)
 
 ## Screenshots
 
-[Contribute](https://github.com/silicon-hills/whisker-keycloak/blob/master/CONTRIBUTING.md) a screenshot
+[Contribute](https://github.com/silicon-hills/nestjs-keycloak/blob/master/CONTRIBUTING.md) a screenshot
 
 ## Contributing
 
-Review the [guidelines for contributing](https://github.com/silicon-hills/whisker-keycloak/blob/master/CONTRIBUTING.md)
+Review the [guidelines for contributing](https://github.com/silicon-hills/nestjs-keycloak/blob/master/CONTRIBUTING.md)
 
 ## License
 
-[MIT License](https://github.com/silicon-hills/whisker-keycloak/blob/master/LICENSE)
+[MIT License](https://github.com/silicon-hills/nestjs-keycloak/blob/master/LICENSE)
 
 [SiliconHills LLC](https://siliconhills.dev) © 2021
 
 ## Changelog
 
-Review the [changelog](https://github.com/silicon-hills/whisker-keycloak/blob/master/CHANGELOG.md)
+Review the [changelog](https://github.com/silicon-hills/nestjs-keycloak/blob/master/CHANGELOG.md)
 
 ## Credits
 

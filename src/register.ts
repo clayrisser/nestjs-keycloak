@@ -1,10 +1,10 @@
 /**
  * File: /src/register.ts
- * Project: whisker-keycloak
+ * Project: nestjs-keycloak
  * File Created: 14-07-2021 11:43:59
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 15-07-2021 16:04:36
+ * Last Modified: 15-07-2021 18:58:25
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -24,13 +24,13 @@
 
 import KcAdminClient from 'keycloak-admin';
 import RoleRepresentation from 'keycloak-admin/lib/defs/roleRepresentation';
-import _ from 'lodash';
+import difference from 'lodash.difference';
 import qs from 'qs';
 import { AxiosResponse } from 'axios';
 import { DiscoveryService, Reflector } from '@nestjs/core';
 import { HttpService } from '@nestjs/axios';
 import { InstanceWrapper } from '@nestjs/core/injector/instance-wrapper';
-import { HashMap, Options } from '~/types';
+import { HashMap, KeycloakOptions } from '~/types';
 import { RESOURCE } from '~/decorators/resource.decorator';
 import { ROLES } from '~/decorators/roles.decorator';
 import { SCOPES } from '~/decorators/scopes.decorator';
@@ -40,8 +40,8 @@ const kcAdminClient = new KcAdminClient();
 
 export default class Register {
   constructor(
-    private readonly options: Options,
-    private httpService: HttpService,
+    private readonly options: KeycloakOptions,
+    private readonly httpService: HttpService,
     private readonly discoveryService: DiscoveryService,
     private readonly reflector: Reflector
   ) {
@@ -130,10 +130,16 @@ export default class Register {
       realmName: this.options.realm
     });
     await this.enableAuthorization();
-    const getRolesRes: any = await this.getRoles();
-    const roleNames = _.map(getRolesRes, 'name');
-    const rolesToCreate = _.difference(data.roles, roleNames);
-    rolesToCreate.forEach((role) => {
+    const getRolesRes = await this.getRoles();
+    const roleNames = getRolesRes.reduce(
+      (roleNames: string[], role: RoleRepresentation) => {
+        if (role.name) roleNames.push(role.name);
+        return roleNames;
+      },
+      []
+    );
+    const rolesToCreate = difference(data.roles, roleNames);
+    rolesToCreate.forEach((role: string) => {
       this.createRoles(role);
     });
     const resources = await this.getResources();
@@ -156,7 +162,7 @@ export default class Register {
           const existingScopes = resourceById.scopes.map((scope: Scope) => {
             return scope.name;
           });
-          const scopesToCreate: any = _.difference(scopes, existingScopes);
+          const scopesToCreate = difference(scopes, existingScopes);
           if (scopesToCreate.length > 0) {
             const createdScopes = await this.createScopes(scopesToCreate);
             this.updateResource(resourceById, createdScopes);
@@ -172,7 +178,7 @@ export default class Register {
       ...this._createdScopes,
       ...scopesRes.data
     ];
-    const scopesToCreate = _.difference(
+    const scopesToCreate = difference(
       scopes,
       createdScopes.map((scope: Scope) => scope.name)
     );

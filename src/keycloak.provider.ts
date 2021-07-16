@@ -1,10 +1,10 @@
 /**
  * File: /src/keycloak.provider.ts
- * Project: whisker-keycloak
+ * Project: nestjs-keycloak
  * File Created: 14-07-2021 11:43:59
  * Author: Clay Risser <email@clayrisser.com>
  * -----
- * Last Modified: 14-07-2021 11:46:14
+ * Last Modified: 15-07-2021 16:45:16
  * Modified By: Clay Risser <email@clayrisser.com>
  * -----
  * Silicon Hills LLC (c) Copyright 2021
@@ -25,25 +25,38 @@
 import KeycloakConnect, { Keycloak } from 'keycloak-connect';
 import session from 'express-session';
 import { FactoryProvider } from '@nestjs/common';
-import { Options } from '~/types';
-import { KEYCLOAK_OPTIONS } from '.';
+import { Request, Response, NextFunction } from 'express';
+import { KeycloakOptions, KeycloakRequest } from '~/types';
+import { KEYCLOAK_OPTIONS } from './index';
 
 export const KEYCLOAK = 'KEYCLOAK';
 
 const KeycloakProvider: FactoryProvider<Keycloak> = {
   provide: KEYCLOAK,
   inject: [KEYCLOAK_OPTIONS],
-  useFactory: (options: Options) => {
+  useFactory: (options: KeycloakOptions) => {
     const { baseUrl, clientSecret, clientId, realm } = options;
-    return new KeycloakConnect({ store: new session.MemoryStore() }, {
-      bearerOnly: true,
-      clientId,
-      realm,
-      serverUrl: `${baseUrl}/auth`,
-      credentials: {
-        ...(clientSecret ? { secret: clientSecret } : {})
-      }
-    } as unknown as any);
+    const keycloak: Keycloak & { accessDenied: any } = new KeycloakConnect(
+      { store: new session.MemoryStore() },
+      {
+        bearerOnly: true,
+        clientId,
+        realm,
+        serverUrl: `${baseUrl}/auth`,
+        credentials: {
+          ...(clientSecret ? { secret: clientSecret } : {})
+        }
+      } as unknown as any
+    );
+    keycloak.accessDenied = (
+      req: KeycloakRequest<Request>,
+      _res: Response,
+      next: NextFunction
+    ) => {
+      req.resourceDenied = true;
+      next();
+    };
+    return keycloak;
   }
 };
 
