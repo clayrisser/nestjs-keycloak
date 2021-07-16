@@ -1,9 +1,9 @@
-# File: /.eslintrc.js
+# File: /Makefile
 # Project: nestjs-keycloak
 # File Created: 14-07-2021 11:43:59
 # Author: Clay Risser <email@clayrisser.com>
 # -----
-# Last Modified: 15-07-2021 16:23:09
+# Last Modified: 15-07-2021 19:32:55
 # Modified By: Clay Risser <email@clayrisser.com>
 # -----
 # Silicon Hills LLC (c) Copyright 2021
@@ -26,7 +26,7 @@ include blackmagic.mk
 
 BABEL ?= node_modules/.bin/babel
 BABEL_NODE ?= node_modules/.bin/babel-node
-CLOC ?= node_modules/.bin/cloc
+CLOC ?= cloc
 CSPELL ?= node_modules/.bin/cspell
 ESLINT ?= node_modules/.bin/eslint
 JEST ?= node_modules/.bin/jest
@@ -117,7 +117,7 @@ inc:
 
 .PHONY: count
 count:
-	@$(CLOC) $(shell $(GIT) ls-files)
+	@LC_ALL=C $(CLOC) $(shell $(GIT) ls-files)
 
 .PHONY: publish +publish
 publish: build
