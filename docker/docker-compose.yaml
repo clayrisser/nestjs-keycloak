@@ -1,0 +1,14 @@
+version: "3.7"
+
+services:
+  age:
+    image: apache/age:v1.0.0
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_PASSWORD: postgres
+
+  age-viewer:
+    image: codejamninja/age-viewer:1.0.0
+    ports:
+      - 3001:3001
