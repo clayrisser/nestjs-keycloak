@@ -1,6 +1,9 @@
 # app
 .env
 
+# node
+/node_modules
+
 # mkpm
 .mkpm/*
 **/.mkpm/*
