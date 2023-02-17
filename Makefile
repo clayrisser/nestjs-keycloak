@@ -14,5 +14,5 @@ docker/%:
 start:
 	@$(TS_NODE) src/index.ts		
 #	@$(TS_NODE) src/methods/index.ts
-
+#	@$(TS_NODE) src/mani.ts
 endif
