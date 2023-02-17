@@ -6,7 +6,8 @@
   "author": "Clay Risser <clayrisser@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "apache-age-client": "^0.0.3"
+    "apache-age-client": "^0.0.3",
+    "pg-protocol": "^1.6.0"
   },
   "devDependencies": {
     "@types/node": "^18.13.0",
