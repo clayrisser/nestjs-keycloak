@@ -9,7 +9,7 @@ async function ConnectToDatabase(
   databasePassword: string,
   graphName: string
 ) {
-  client = await ApacheAgeClient.connect({
+  const client = await ApacheAgeClient.connect({
     database: databaseName,
     host: databaseHost,
     password: databasePassword,
@@ -175,76 +175,79 @@ const findById = async (graphName: string, node: any) => {
 (async () => {
   await connection();
 
-  // const create_graph = await createGraph("demo-graph");
-  // console.log(create_graph);
+  const create_graph = await createGraph("demo-graph");
+  console.log(create_graph);
 
-  // const drop_graph = await dropGraph("demo-graph");
-  // console.log(drop_graph);
+  const drop_graph = await dropGraph("demo-graph");
+  console.log(drop_graph);
 
-  // const deleteAllNodesInGraph = await deleteAllNodes("data-graph");
-  // console.log(deleteAllNodesInGraph);
+  const deleteAllNodesInGraph = await deleteAllNodes("data-graph");
+  console.log(deleteAllNodesInGraph);
 
-  // const create_node = await createNode("data-graph", {
-  //   label: "User",
-  //   properties: "userId: 'krishna', qualified: false",
-  // });
-  // console.log(create_node);
+  const create_node = await createNode("data-graph", {
+    label: "User",
+    properties: "userId: 'krishna', qualified: false",
+  });
+  console.log(create_node);
 
-  // const create_node_relationship = await matchNodeAndCreateRelationship(
-  //   "data-graph",
-  //   { label: "REFERRAL", properties: "referralCode: '1234'" },
-  //   { label: "User", properties: "userId: 'Mohan',age:25, qualified: false" },
-  //   { label: "User", properties: "userId: 'Rohan',age:24, qualified: false" }
-  // );
-  // console.log(create_node_relationship);
+  const create_node_relationship = await matchNodeAndCreateRelationship(
+    "data-graph",
+    { label: "REFERRAL", properties: "referralCode: '1234'" },
+    { label: "User", properties: "userId: 'Mohan',age:25, qualified: false" },
+    { label: "User", properties: "userId: 'Rohan',age:24, qualified: false" }
+  );
+  console.log(create_node_relationship);
 
-  // const create_nodes_and_relationship = await createNodesAndRelationship(
-  //   "data-graph",
-  //   { label: "REFERRAL", properties: "referralCode: '1236'" },
-  //   { label: "User", properties: "userId: 'Mohan', age:25,qualified: false" },
-  //   { label: "User", properties: "userId: 'Rohan',age:24, qualified: false" }
-  // );
-  // console.log(create_nodes_and_relationship);
+  const create_nodes_and_relationship = await createNodesAndRelationship(
+    "data-graph",
+    { label: "REFERRAL", properties: "referralCode: '1236'" },
+    { label: "User", properties: "userId: 'Mohan', age:25,qualified: false" },
+    { label: "User", properties: "userId: 'Rohan',age:24, qualified: false" }
+  );
+  console.log(create_nodes_and_relationship);
 
-  // const delete_node = await deleteNode("data-graph", {
-  //   label: "User",
-  //   properties: "userId: 'Rohan',age:24, qualified: false",
-  // });
-  // console.log(delete_node);
+  const delete_node = await deleteNode("data-graph", {
+    label: "User",
+    properties: "userId: 'Rohan',age:24, qualified: false",
+  });
+  console.log(delete_node);
 
-  // const update_node_property = await UpdateNodeProperty(
-  //   "data-graph",
-  //   { label: "User", properties: "userId: 'Mohan',age:28, qualified: false" },
-  //   { name: "userId", value: "'Sohan'" }
-  // );
-  // console.log(update_node_property);
+  const update_node_property = await UpdateNodeProperty(
+    "data-graph",
+    { label: "User", properties: "userId: 'Mohan',age:28, qualified: false" },
+    { name: "userId", value: "'Sohan'" }
+  );
+  console.log(update_node_property);
 
-  // const update_edge_property = await updateEdgeProperty(
-  //   "data-graph",
-  //   { label: "REFERRAL", properties: "referralCode: '1234'" },
-  //   { name: "referralCode", value: "'11122233'" }
-  // );
-  // console.log(update_edge_property);
+  const update_edge_property = await updateEdgeProperty(
+    "data-graph",
+    { label: "REFERRAL", properties: "referralCode: '1234'" },
+    { name: "referralCode", value: "'11122233'" }
+  );
+  console.log(update_edge_property);
 
-  // const delete_particular_edge = await deleteParticularRelationEdge("data-graph", {
-  //   label: "REFERRAL",
-  //   properties: "referralCode: '1235'",
-  // });
-  // console.log(delete_particular_edge);
+  const delete_particular_edge = await deleteParticularRelationEdge(
+    "data-graph",
+    {
+      label: "REFERRAL",
+      properties: "referralCode: '1235'",
+    }
+  );
+  console.log(delete_particular_edge);
 
-  // const delete_all_edge = await deleteAllEdge("data-graph");
-  // console.log(delete_all_edge);
+  const delete_all_edge = await deleteAllEdge("data-graph");
+  console.log(delete_all_edge);
 
-  // const find_by_node_property = await findByNodeProperty("data-graph", {
-  //   label: "User",
-  //   properties: "userId: 'Mohan'",
-  // });
-  // console.log(find_by_node_property);
+  const find_by_node_property = await findByNodeProperty("data-graph", {
+    label: "User",
+    properties: "userId: 'Mohan'",
+  });
+  console.log(find_by_node_property);
 
-  // const find_by_label = await findByNodeLabel("data-graph", {
-  //   label: "Person",
-  // });
-  // console.log(find_by_label);
+  const find_by_label = await findByNodeLabel("data-graph", {
+    label: "Person",
+  });
+  console.log(find_by_label);
 
   const find_by_id = await findById("data-graph", {
     id: 844424930131974,
