@@ -5,37 +5,48 @@ import {
   dbConnection,
   createGraph,
   dropGraph,
+  deleteNode,
+  getData,
+  deleteAllNodes,
 } from "./methods";
 
 (async () => {
-  await dbConnection();
-  // await createGraph("some-graph");
+  console.log(await dbConnection({}));
+  // console.log(await createGraph("dr-graph"));
 
-  // await dropGraph("me-graph");
+  // console.log(await dropGraph("dr-graph"));
 
   // console.log(
   //   await createNode({
-  //     graph: "some-graph",
+  //     graph: "dr-graph",
   //     userId: "a",
-  //     name: "Bob",
-  //     qualified: false,
+  //     name: "Ben",
+  //     qualified: true,
   //   })
   // );
+
+  console.log(
+    await createReferrerNode({
+      graph: "dr-graph",
+      userId: "bb3",
+      name: "benTen",
+      qualified: false,
+      referrerId: "b",
+    })
+  );
 
   // console.log(
-  //   await createReferrerNode({
-  //     graph: "some-graph",
-  //     userId: "b",
-  //     name: "Alice",
-  //     qualified: false,
-  //     referrerId: "a",
+  //   await updateQualifiedNode({
+  //     graph: "dr-graph",
+  //     userId: "a",
+  //     name: "Bob",
+  //     qualified: true,
   //   })
   // );
 
-  //   await updateQualifiedNode({
-  //     graph: "some-graph",
-  //     userId: 1,
-  //     name: "Bob",
-  //     qualified: true,
-  //   });
+  // console.log(await getData({}));
+
+  // console.log(await deleteNode({ graph: "dr-graph", userId: "a" }));
+
+  // console.log(await deleteAllNodes({ graph: "dr-graph" }));
 })();
