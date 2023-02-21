@@ -262,6 +262,59 @@ const deleteEdgeById = async (graphName: string, edge: any) => {
   `);
 };
 
+const findBySingleVertexProperty = async (graphName: string, node: any) => {
+  return await client.executeCypher(`
+    SELECT * FROM ag_catalog.cypher('${graphName}', $$
+      MATCH (n)
+      WHERE n.${node.name} = ${node.value}
+      RETURN n
+    $$) as (v agtype);
+  `);
+};
+
+const findBySingleEdgeProperty = async (graphName: string, edge: any) => {
+  return await client.executeCypher(` 
+    SELECT * FROM ag_catalog.cypher('${graphName}', $$
+      MATCH ()-[e]-()
+       WHERE e.${edge.name} = ${edge.value}
+      RETURN e
+    $$) as (v agtype);
+  `);
+};
+
+const findEdgesByLabel = async (graphName: string, edge: any) => {
+  return await client.executeCypher(`
+    SELECT * FROM ag_catalog.cypher('${graphName}', $$
+      MATCH ()-[e:${edge.label}]-()
+      RETURN e
+    $$) as (v agtype);
+  `);
+};
+
+const findRelationBetweenTwoVertex = async (
+  graphName: string,
+  node1: any,
+  node2: any
+) => {
+  return await client.executeCypher(`
+    SELECT * FROM ag_catalog.cypher('${graphName}', $$  
+      MATCH (n1)-[e]-(n2)
+      WHERE id(n1) = ${node1.id} AND id(n2) = ${node2.id}
+      RETURN e
+    $$) as (v agtype);
+  `);
+};
+
+const removePropertyFromVertex = async (graphName: string, node: any) => {
+  return await client.executeCypher(`
+    S+LECT * FROM ag_catalog.cypher('${graphName}', $$
+      MATCH (n)
+      WHERE id(n) = ${node.id}
+      REMOVE n.${node.name}
+      RETURN n
+    $$) as (v agtype);
+  `);
+};
 (async () => {
   await connection();
 
@@ -368,11 +421,11 @@ const deleteEdgeById = async (graphName: string, edge: any) => {
   // const find_all_edges = await findAllEdges("data-graph");
   // console.log(find_all_edges);
 
-  // const find_by_node_property = await findByVertexProperty("data-graph", {
+  // const find_by_vertex_property = await findByVertexProperty("data-graph", {
   //   name: "qualified",
   //   value: false,
   // });
-  // console.log(find_by_node_property);
+  // console.log(find_by_vertex_property);
 
   // const find_by_edge_property = await findByEdgeProperty("data-graph", {
   //   name: "referralCode",
@@ -396,6 +449,40 @@ const deleteEdgeById = async (graphName: string, edge: any) => {
   //   id: 1125899906842632,
   // });
   // console.log(delete_edge_by_id);
+
+  // const find_by_single_edge_property = await findBySingleEdgeProperty(
+  //   "data-graph",
+  //   {
+  //     name: "referralCode",
+  //     value: "'1285'",
+  //   }
+  // );
+  // console.log(find_by_single_edge_property);
+
+  // const find_by_single_vertex_property = await findBySingleVertexProperty(
+  //   "data-graph",
+  //   {
+  //     name: "qualified",
+  //     value: false,
+  //   }
+  // );
+  // console.log(find_by_single_vertex_property);
+
+  // const find_edge_by_label = await findEdgesByLabel("data-graph", {
+  //   label: "REFERRAL",
+  // });
+  // console.log(find_edge_by_label);
+
+  // const find_relation_between_two_vertex = await findRelationBetweenTwoVertex(
+  //   "data-graph",
+  //   {
+  //     id: 844424930131991,
+  //   },
+  //   {
+  //     id: 844424930131990,
+  //   }
+  // );
+  // console.log(find_relation_between_two_vertex);
 
   await client.disconnect();
 })();
