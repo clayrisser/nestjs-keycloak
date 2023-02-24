@@ -1,4 +1,5 @@
 import { ApacheAgeClient } from "apache-age-client";
+import { users } from "../src/user/users";
 
 let client: any;
 async function ConnectToDatabase(
@@ -317,6 +318,7 @@ const removePropertyFromVertex = async (graphName: string, node: any) => {
 };
 (async () => {
   await connection();
+  users();
 
   // const create_graph = await createGraph("demo-graph");
   // console.log(create_graph);
