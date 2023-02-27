@@ -21,33 +21,50 @@ export interface dbProps {
 
 let client: any;
 export const dbConnection = async (data: dbProps) => {
-  client = await ApacheAgeClient.connect({
-    database: data.database || "postgres",
-    host: data.host || "localhost",
-    password: data.password || "postgres",
-    port: data.port || 5432,
-    user: data.user || "postgres",
-    graph: data.graph || "some-graph",
-  });
-  console.log("connected to db", client.database);
+  try {
+    client = await ApacheAgeClient.connect({
+      database: data.database || "postgres",
+      host: data.host || "localhost",
+      password: data.password || "postgres",
+      port: data.port || 5432,
+      user: data.user || "postgres",
+      graph: data.graph || "some-graph",
+    });
+    console.log("connected to db", client.database);
+  } catch (err) {
+    console.log(err);
+  }
 };
 
 export const createGraph = async (graph: string) => {
-  return await client.executeCypher(
-    `SELECT * FROM ag_catalog.create_graph('${graph}');`
-  );
-  console.log("The graph created", graph);
+  try {
+    return await client.executeCypher(
+      `SELECT * FROM ag_catalog.create_graph('${graph}');`
+    );
+    console.log("The graph created", graph);
+  } catch (err) {
+    console.log("graph already exists");
+  }
 };
 
 export const dropGraph = async (graph: string) => {
-  await client.executeCypher(
-    `SELECT * FROM ag_catalog.drop_graph('${graph}', true);`
-  );
-  console.log("graph dropped", graph);
+  try {
+    await client.executeCypher(
+      `SELECT * FROM ag_catalog.drop_graph('${graph}', true);`
+    );
+    console.log("graph dropped", graph);
+  } catch (err) {
+    console.log("graph does not exist");
+  }
 };
 
 export const createNode = async (data: NodeProps) => {
-  await client.executeCypher(`
+  const existedUser = await client.executeCypher(
+    `SELECT * FROM ag_catalog.cypher('${data.graph}', $$ MATCH (u:User {UserId: '${data.userId}'})$$) as (u agtype)`
+  );
+  existedUser.rows.length > 0
+    ? console.log("user already exists")
+    : await client.executeCypher(`
     SELECT * FROM ag_catalog.cypher('${data.graph}', $$
       MERGE (a:User {UserId:'${data.userId}'})
       SET a.name = '${data.name}', a.qualified = ${data.qualified}
@@ -111,7 +128,8 @@ export const getData = async (data: NodeProps) => {
 };
 
 export const deleteNode = async (data: NodeProps) => {
-  return await client.executeCypher(`
+  try {
+    return await client.executeCypher(`
     SELECT * FROM ag_catalog.cypher('${data.graph}', $$
       MATCH (a:User)
       WHERE a.UserId = '${data.userId}'
@@ -119,18 +137,27 @@ export const deleteNode = async (data: NodeProps) => {
       RETURN a
     $$) as (a agtype);
   `);
-  console.log(
-    `The User '${data.name}' along with the id '${data.userId}' is deleted`
-  );
+    console.log(
+      `The User '${data.name}' along with the id '${data.userId}' is deleted`
+    );
+  } catch (err) {
+    console.log(err);
+  }
 };
 export const deleteAllNodes = async (data: NodeProps) => {
-  return await client.executeCypher(
-    `SELECT * FROM ag_catalog.cypher('${data.graph}', $$ MATCH (a:User) DETACH DELETE a RETURN a $$) as (a agtype);`
-  );
+  try {
+    return await client.executeCypher(
+      `SELECT * FROM ag_catalog.cypher('${data.graph}', $$ MATCH (a:User) DETACH DELETE a RETURN a $$) as (a agtype);`
+    );
+    console.log("All the nodes are deleted");
+  } catch (err) {
+    console.log(err);
+  }
 };
 
 export const deleteRelationship = async (data: NodeProps) => {
-  return await client.executeCypher(`
+  try {
+    return await client.executeCypher(`
     SELECT * FROM ag_catalog.cypher('${data.graph}', $$
       MATCH (a:User)-[e:REFERRAL]->(b:User)
       WHERE a.UserId = '${data.referrerId}' AND b.UserId = '${data.userId}'
@@ -138,7 +165,10 @@ export const deleteRelationship = async (data: NodeProps) => {
       RETURN a, e, b
     $$) as (a agtype, e agtype, b agtype);
   `);
-  console.log(
-    `The Relationship between '${data.referrerId}' and '${data.userId}' is deleted`
-  );
+    console.log(
+      `The Relationship between '${data.referrerId}' and '${data.userId}' is deleted`
+    );
+  } catch (err) {
+    console.log(err);
+  }
 };
