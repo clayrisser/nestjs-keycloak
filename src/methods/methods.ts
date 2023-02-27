@@ -60,22 +60,26 @@ export const createNode = async (data: NodeProps) => {
 };
 
 export const createReferrerNode = async (data: NodeProps) => {
-  try {
+  const existedUser =
+    await client.executeCypher(`SELECT * FROM ag_catalog.cypher('${data.graph}', $$ MATCH (u:User {UserId: '${data.userId}'})
+    RETURN u $$) as (u agtype)`);
+
+  if (existedUser.rows.length > 0) {
+    console.log("user already exists");
+  } else {
     return await client.executeCypher(`
     SELECT * FROM ag_catalog.cypher('${data.graph}', $$
       MATCH (a:User)
       WHERE a.UserId = '${data.referrerId}'
       MERGE (b:User {UserId:'${data.userId}'})
       SET b.name = '${data.name}', b.qualified = ${data.qualified}      
-      CREATE (a)-[e:REFERRER]->(b)
+      MERGE (a)-[e:REFERRAL]->(b)
       return a, e, b 
       $$) as (a agtype, e agtype, b agtype)
   `);
     console.log(
       `The New User '${data.name}' along with id '${data.userId}' is Referred by '${data.referrerId}'`
     );
-  } catch (e) {
-    console.log("already user exists", e);
   }
 };
 
@@ -122,5 +126,19 @@ export const deleteNode = async (data: NodeProps) => {
 export const deleteAllNodes = async (data: NodeProps) => {
   return await client.executeCypher(
     `SELECT * FROM ag_catalog.cypher('${data.graph}', $$ MATCH (a:User) DETACH DELETE a RETURN a $$) as (a agtype);`
+  );
+};
+
+export const deleteRelationship = async (data: NodeProps) => {
+  return await client.executeCypher(`
+    SELECT * FROM ag_catalog.cypher('${data.graph}', $$
+      MATCH (a:User)-[e:REFERRAL]->(b:User)
+      WHERE a.UserId = '${data.referrerId}' AND b.UserId = '${data.userId}'
+      DELETE e
+      RETURN a, e, b
+    $$) as (a agtype, e agtype, b agtype);
+  `);
+  console.log(
+    `The Relationship between '${data.referrerId}' and '${data.userId}' is deleted`
   );
 };
