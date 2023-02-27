@@ -118,9 +118,9 @@ export const updateQualifiedNode = async (data: NodeProps) => {
 
 export const getData = async (data: NodeProps) => {
   return await client.executeCypher(`
-    SELECT * FROM ag_catalog.cypher('dr-graph', $$
+    SELECT * FROM ag_catalog.cypher('${data.graph}', $$
       MATCH (a:User)
-      WHERE a.userId = 'a'
+      WHERE a.userId = '${data.userId}'
       RETURN a
     $$) as (a agtype);
   `);
