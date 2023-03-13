@@ -1,4 +1,5 @@
-// import { ApacheAgeClient } from "apache-age-client";
+import { ApacheAgeClient } from "apache-age-client";
+import { users } from "../user/users";
 
 // (async () => {
 //   const client = await ApacheAgeClient.connect({
@@ -73,8 +74,6 @@
 
 //   await client.disconnect();
 // })();
-
-import { ApacheAgeClient } from "apache-age-client";
 
 let client: any;
 async function ConnectToDatabase(
@@ -181,70 +180,59 @@ const UpdateNodeProperty = async (
 };
 
 (async () => {
-  client = await connection();
-
+  await users();
+  // client = await connection();
   // const create_graph = await createGraph("data-graph");
   // console.log(create_graph);
-
-  const create_node = await createNode("data-graph", {
-    label: "Name",
-    properties: 'name: "Ram Krishna", qualified: false',
-  });
-  console.log(create_node);
-
-  const create_nodes = await createNode("data-graph", {
-    label: "Name",
-    properties: 'name:"Sara Singh", qualified: false',
-  });
-
-  console.log(create_nodes);
-
-  const showNode = await createNode("data-graph", {
-    label: "Name",
-    properties: 'name:"Bala", qualified: false',
-  });
-
-  console.log(showNode);
-
-  const create_node_relationship = await matchNodeAndCreateRelationship(
-    "data-graph",
-    { label: "LOVERS", properties: 'referralCode: "12345566"' },
-    { label: "Name", properties: 'Person: "Ram Krishna", qualified: false' },
-    { label: "Name", properties: 'Person: "Sara Singh", qualified: false' }
-  );
-  const create_node_relationship1 = await matchNodeAndCreateRelationship(
-    "data-graph",
-    { label: "ENEMIES", properties: 'referralCode: "12345566"' },
-    { label: "Name", properties: 'Person: "Ram Krishna", qualified: false' },
-    { label: "Name", properties: 'Person: "Bala", qualified: false' }
-  );
-  console.log(create_node_relationship);
-
-  const create_node_relationship2 = await matchNodeAndCreateRelationship(
-    "data-graph",
-    { label: "FRIENDS", properties: 'referralCode: "1234556677"' },
-    { label: "Name", properties: 'Person: "Ram Krishna", qualified: false' },
-    { label: "Name", properties: 'Person: "Bala", qualified: false' }
-  );
-  console.log(create_node_relationship2);
-
-  const create_nodes_and_relationship = await createNodesAndRelationship(
-    "data-graph",
-    { label: "REFERRAL", properties: "referralCode: '1236'" },
-    { label: "Name", properties: "Person: 'HariKrishna', qualified: false" },
-    { label: "Name", properties: "Person: 'PhaniBhushan', qualified: false" }
-  );
-  console.log(create_nodes_and_relationship);
-
+  // const create_node = await createNode("data-graph", {
+  //   label: "Name",
+  //   properties: 'name: "Ram Krishna", qualified: false',
+  // });
+  // console.log(create_node);
+  // const create_nodes = await createNode("data-graph", {
+  //   label: "Name",
+  //   properties: 'name:"Sara Singh", qualified: false',
+  // });
+  // console.log(create_nodes);
+  // const showNode = await createNode("data-graph", {
+  //   label: "Name",
+  //   properties: 'name:"Bala", qualified: false',
+  // });
+  // console.log(showNode);
+  // const create_node_relationship = await matchNodeAndCreateRelationship(
+  //   "data-graph",
+  //   { label: "LOVERS", properties: 'referralCode: "12345566"' },
+  //   { label: "Name", properties: 'Person: "Ram Krishna", qualified: false' },
+  //   { label: "Name", properties: 'Person: "Sara Singh", qualified: false' }
+  // );
+  // const create_node_relationship1 = await matchNodeAndCreateRelationship(
+  //   "data-graph",
+  //   { label: "ENEMIES", properties: 'referralCode: "12345566"' },
+  //   { label: "Name", properties: 'Person: "Ram Krishna", qualified: false' },
+  //   { label: "Name", properties: 'Person: "Bala", qualified: false' }
+  // );
+  // console.log(create_node_relationship);
+  // const create_node_relationship2 = await matchNodeAndCreateRelationship(
+  //   "data-graph",
+  //   { label: "FRIENDS", properties: 'referralCode: "1234556677"' },
+  //   { label: "Name", properties: 'Person: "Ram Krishna", qualified: false' },
+  //   { label: "Name", properties: 'Person: "Bala", qualified: false' }
+  // );
+  // console.log(create_node_relationship2);
+  // const create_nodes_and_relationship = await createNodesAndRelationship(
+  //   "data-graph",
+  //   { label: "REFERRAL", properties: "referralCode: '1236'" },
+  //   { label: "Name", properties: "Person: 'HariKrishna', qualified: false" },
+  //   { label: "Name", properties: "Person: 'PhaniBhushan', qualified: false" }
+  // );
+  // console.log(create_nodes_and_relationship);
   // const deleteAllNodesInGraph = await deleteAllNodes("data-graph");
   // console.log(deleteAllNodesInGraph);
-
   // const create_node = await createNode("data-graph", {
   //   label: "User",
   //   properties: "userId: 'krishna', qualified: false",
   // });
   // console.log(create_node);
-
   // const create_node_relationship = await matchNodeAndCreateRelationship(
   //   "data-graph",
   //   { label: "REFERRAL", properties: "referralCode: '1234'" },
@@ -252,7 +240,6 @@ const UpdateNodeProperty = async (
   //   { label: "User", properties: "userId: 'krishna', qualified: false" }
   // );
   // console.log(create_node_relationship);
-
   // const create_nodes_and_relationship = await createNodesAndRelationship(
   //   "data-graph",
   //   { label: "REFERRAL", properties: "referralCode: '1236'" },
@@ -260,13 +247,11 @@ const UpdateNodeProperty = async (
   //   { label: "User", properties: "userId: 'PhaniBhushan', qualified: false" }
   // );
   // console.log(create_nodes_and_relationship);
-
   // const update_node_property = await UpdateNodeProperty(
   //   "data-graph",
   //   { label: "User", properties: "userId: 'krishna', qualified: false" },
   //   { properties: "name: qualified, value: false" }
   // );
   // console.log(update_node_property);
-
-  await client.disconnect();
+  // await client.disconnect();
 })();

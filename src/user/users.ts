@@ -26,10 +26,17 @@ const createGraph = async (graphName: string) => {
 };
 
 const dropGraph = async (graphName: string) => {
-  return await client.executeCypher(`
-    SELECT * FROM ag_catalog.drop_graph('${graphName}',true);
-
+  const result = await client.executeCypher(` 
+      SELECT COUNT(*) as count FROM ag_catalog.ag_graph WHERE name = '${graphName}';
   `);
+
+  const count = result.rows[0].count;
+
+  if (count === "1") {
+    return await client.executeCypher(`
+    SELECT * FROM ag_catalog.drop_graph('${graphName}',true);
+    `);
+  }
 };
 async function registerUser(graphName: string, node: any) {
   return await client.executeCypher(`
@@ -65,33 +72,41 @@ export const users = async () => {
     "some-graph"
   );
 
-  for (let i = 0; i < 5; i++) {
+  const drop_graph = await dropGraph("data-graph");
+
+  let arr: number[] = [];
+  let arr2: number[] = [];
+  for (let i = 0; i < 3; i++) {
     if (i === 0) {
       const create_graph = await createGraph("data-graph");
       console.log("create_graph", create_graph);
+      const user = await registerUser("data-graph", {
+        label: "User",
+        properties: `id: ${i}, isQualified: false`,
+      });
+      console.log("user", user);
+      arr2.push(i);
     }
-    const user = await registerUser("data-graph", {
-      label: "User",
-      properties: `id: ${i}, isQualified: false`,
-    });
-    console.log("user", user);
-  }
-
-  for (let i = 0; i < 5; i++) {
-    for (let j = 0; j < 3; j++) {
-      const userWithRelationship = await registerUserWithRelationship(
-        "data-graph",
-        {
-          label: "User",
-          properties: `id: ${i}, isQualified: false`,
-        },
-        "REFERRED",
-        {
-          label: "User",
-          properties: `id: ${j}, isQualified: false`,
-        }
-      );
-      console.log("userWithRelationship", userWithRelationship);
+    for (let j = 0; j < arr2.length; j++) {
+      for (let k = 0; k < arr2.length * 2; k++) {
+        const random = Math.round(Math.random() * 1000);
+        arr.push(random);
+        const userWithRelationship = await registerUserWithRelationship(
+          "data-graph",
+          {
+            label: "User",
+            properties: `id: ${arr2[j]}, isQualified: false`,
+          },
+          "REFERRED",
+          {
+            label: "User",
+            properties: `id: ${random}, isQualified: false`,
+          }
+        );
+        console.log("userWithRelationship", userWithRelationship);
+      }
     }
+    arr2 = arr;
+    arr = [];
   }
 };
