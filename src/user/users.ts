@@ -1,6 +1,7 @@
 import { ApacheAgeClient } from "apache-age-client";
 
 let client: ApacheAgeClient;
+
 async function ConnectToDatabase(
   databaseName: string,
   databaseHost: string,
@@ -53,13 +54,22 @@ const registerUserWithRelationship = async (
   relationship: any,
   toNode: any
 ) => {
-  return await client.executeCypher(`
+  const id = await client.executeCypher(`
+       SELECT * FROM cypher('${graphName}', $$
+       MATCH (n)
+       WHERE n.id=${toNode.id}
+        RETURN n
+        $$) as (name agtype);
+        `);
+  if (id.rowCount === 0) {
+    return await client.executeCypher(`
         SELECT * FROM ag_catalog.cypher('${graphName}', $$
         MATCH (n:${fromNode.label} {${fromNode.properties}})
         create (n)-[e:${relationship}]->(b:${toNode.label} {${toNode.properties}})
         RETURN n,e,b
         $$) as (v agtype,a varchar,b agtype);
         `);
+  } else return "user already exists";
 };
 
 export const users = async () => {
@@ -76,7 +86,7 @@ export const users = async () => {
 
   let arr: number[] = [];
   let arr2: number[] = [];
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 4; i++) {
     if (i === 0) {
       const create_graph = await createGraph("data-graph");
       console.log("create_graph", create_graph);
@@ -100,6 +110,7 @@ export const users = async () => {
           "REFERRED",
           {
             label: "User",
+            id: random,
             properties: `id: ${random}, isQualified: false`,
           }
         );
