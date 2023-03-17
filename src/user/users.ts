@@ -269,7 +269,7 @@ export const users = async () => {
 
   let arr: string[] = [];
   let arr2: string[] = [];
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 4; i++) {
     if (i === 0) {
       const create_graph = await createGraph("data-graph");
       console.log("create_graph", create_graph);

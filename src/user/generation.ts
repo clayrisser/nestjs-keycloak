@@ -90,10 +90,6 @@ const goToEveryNode = async (
   const users = result.rows.map((row: any) => row.id);
   if (users.length === 0) return;
   else {
-    let lastQualifiedId = generationData.lastQualifiedId;
-    let gap = generationData.gap;
-    let nextQualifiedId = generationData.nextQualifiedId;
-
     for (let i = 0; i < users.length; i++) {
       const isQualified = await getPropertyByPropertyName(client, graphName, {
         propertyName: "isQualified",
@@ -101,6 +97,9 @@ const goToEveryNode = async (
         id: users[i],
         returnPropertyName: "id",
       });
+      let lastQualifiedId = generationData.lastQualifiedId;
+      let gap = generationData.gap;
+      let nextQualifiedId = generationData.nextQualifiedId;
 
       const qualifiedLength = isQualified.length;
 
@@ -110,21 +109,22 @@ const goToEveryNode = async (
       if (qualifiedLength !== 0 && !gap) {
         lastQualifiedId = isQualified[0];
       }
-      if (gap && qualifiedLength !== 0) {
+      if (gap && qualifiedLength !== 0 && lastQualifiedId !== undefined) {
         nextQualifiedId = isQualified[0];
       }
 
       if (
         nextQualifiedId !== undefined &&
-        lastQualifiedId !== undefined &&
-        gap
+        generationData.lastQualifiedId !== undefined &&
+        generationData.gap
       ) {
         await createCustomEdge("data-graph", {
-          from: lastQualifiedId,
+          from: generationData.lastQualifiedId,
           to: nextQualifiedId,
           propertyName: "id",
           label: "GENERATION",
         });
+
         lastQualifiedId = nextQualifiedId;
         nextQualifiedId = undefined;
         gap = false;
