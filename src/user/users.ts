@@ -104,6 +104,15 @@ export const findByReferralCode = async (
       `);
 };
 
+const findEdgeByLabel = async (graphName: string, label: string) => {
+  return await client.executeCypher(`
+  SELECT * FROM cypher('${graphName}', $$
+    MATCH (n)-[e:${label}]->(m)
+    RETURN e
+  $$) as (name agtype);
+`);
+};
+
 export const findEdgeByProperty = async (graphName: string, node: any) => {
   console.log("from", node.from, "-[]->", node.to);
   return await client.executeCypher(`
@@ -215,7 +224,8 @@ export const users = async () => {
     "some-graph"
   );
 
-  generation(client);
+  // const findEdge = await findEdgeByLabel("data-graph", "INFLUENCER");
+  // console.log("findEdge", findEdge);
 
   // const graph = await createGraph("data-graph");
 
@@ -226,7 +236,7 @@ export const users = async () => {
   //   })
   // );
 
-  // const drop_graph = await dropGraph("data-graph");
+  const drop_graph = await dropGraph("data-graph");
   // const referralCode = await generateReferralCode();
   // const id = await generateId();
 
@@ -257,41 +267,49 @@ export const users = async () => {
   // );
   // console.log("userWithRelationship", userWithRelationship);
 
-  // let arr: number[] = [];
-  // let arr2: number[] = [];
-  // for (let i = 0; i < 3; i++) {
-  //   if (i === 0) {
-  //     const create_graph = await createGraph("data-graph");
-  //     console.log("create_graph", create_graph);
-  //     const user = await registerUser("data-graph", {
-  //       label: "User",
-  //       properties: `id: ${i}, isQualified: false`,
-  //     });
-  //     console.log("user", user);
-  //     arr2.push(i);
-  //   }
-  //   for (let j = 0; j < arr2.length; j++) {
-  //     for (let k = 0; k < arr2.length * 2; k++) {
-  //       const random = Math.round(Math.random() * 1000);
-  //       arr.push(random);
-  //       const userWithRelationship = await registerUserWithRelationship(
-  //         "data-graph",
-  //         {
-  //           label: "User",
-  //           properties: `id: ${arr2[j]}, isQualified: false`,
-  //         },
-  //         {
-  //            influencer:[1,2,3]
-  //         }
-  //         {
-  //           label: "User",
-  //           properties: { id: random, isQualified: false },
-  //         }
-  //       );
-  //       console.log("userWithRelationship", userWithRelationship);
-  //     }
-  //   }
-  //   arr2 = arr;
-  //   arr = [];
-  // }
+  let arr: string[] = [];
+  let arr2: string[] = [];
+  for (let i = 0; i < 6; i++) {
+    if (i === 0) {
+      const create_graph = await createGraph("data-graph");
+      console.log("create_graph", create_graph);
+      const user = await registerUser("data-graph", {
+        label: "User",
+        properties: `id: 2, referralCode: 'abcde' ,isQualified:false,tier:1`,
+      });
+      console.log("user", user);
+      arr2.push("abcde");
+    }
+    for (let j = 0; j < arr2.length; j++) {
+      for (let k = 0; k < 2; k++) {
+        const referralCode = await generateReferralCode();
+        const id = await generateId();
+        // const random = Math.round(Math.random() * 1000);
+        arr.push(referralCode);
+        const userWithRelationship = await registerUserWithRelationship(
+          "data-graph",
+          {
+            label: "User",
+            properties: `id: ${arr2[j]}, isQualified: false`,
+            referralCode: arr2[j],
+          },
+          {
+            influencer: [1, 2, 3],
+            edgeName: "REFERRAL",
+          },
+          {
+            label: "User",
+            properties: ` id: ${id}, isQualified: ${
+              id % 2 === 0
+            },referralCode:'${referralCode}',tier:0`,
+            id: id,
+          }
+        );
+        console.log("userWithRelationship", userWithRelationship);
+      }
+    }
+    arr2 = arr;
+    arr = [];
+  }
+  generation(client);
 };
