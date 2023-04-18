@@ -1,4 +1,3 @@
-import { truncate } from "fs";
 import { createGraph, users, createCustomEdge } from "./users";
 
 const findMaxTier = async (client: any, graphName: string) => {
@@ -40,7 +39,6 @@ const findTheUsersConnectedToTheNode = async (
         return b.id
       $$) as (id agtype);
   `);
-
   console.log(result);
 };
 
@@ -59,6 +57,22 @@ const findTheEdgesConnectedToTheNode = async (
       $$) as (id agtype);
   `);
   return result;
+};
+
+export const updateProperty = async (
+  client: any,
+  graphName: string,
+  nodes: any
+) => {
+  console.log("nodes", nodes);
+  return await client.executeCypher(`
+        SELECT * FROM cypher('${graphName}', $$     
+            match(n)
+            where n.${nodes.propertyName}=${nodes.propertyValue}
+            set n.${nodes.updatePropertyName}=${nodes.updatePropertyValue}
+            return n
+        $$) as (n agtype);
+      `);
 };
 
 const findTheRootNodes = async (client: any, graphName: string) => {
@@ -100,11 +114,13 @@ const goToEveryNode = async (
       let lastQualifiedId = generationData.lastQualifiedId;
       let gap = generationData.gap;
       let nextQualifiedId = generationData.nextQualifiedId;
+      let generationLevel = generationData.generationLevel;
 
       const qualifiedLength = isQualified.length;
 
       if (qualifiedLength === 0 && lastQualifiedId !== undefined) {
         gap = true;
+        generationLevel++;
       }
       if (qualifiedLength !== 0 && !gap) {
         lastQualifiedId = isQualified[0];
@@ -125,15 +141,24 @@ const goToEveryNode = async (
           label: "GENERATION",
         });
 
+        await updateProperty(client, "data-graph", {
+          propertyName: "id",
+          propertyValue: nextQualifiedId,
+          updatePropertyName: "generationLevel",
+          updatePropertyValue: generationLevel,
+        });
+
         lastQualifiedId = nextQualifiedId;
         nextQualifiedId = undefined;
         gap = false;
+        generationLevel = 0;
       }
 
       await goToEveryNode(client, "data-graph", users[i], {
         lastQualifiedId: lastQualifiedId,
         gap: gap,
         nextQualifiedId: nextQualifiedId,
+        generationLevel,
       });
       count++;
     }
@@ -156,7 +181,9 @@ const goToEveryTree = async (
         isQualified[0] === undefined ? undefined : isQualified[0],
       gap: false,
       nextQualifiedId: undefined,
+      generationLevel: 0,
     });
+
     count++;
   }
 };

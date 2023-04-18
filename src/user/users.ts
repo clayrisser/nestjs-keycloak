@@ -275,13 +275,13 @@ export const users = async () => {
       console.log("create_graph", create_graph);
       const user = await registerUser("data-graph", {
         label: "User",
-        properties: `id: 2, referralCode: 'abcde' ,isQualified:false,tier:1`,
+        properties: `id: 2, referralCode: 'abcde' ,isQualified:false,tier:1,generationLevel:0`,
       });
       console.log("user", user);
       arr2.push("abcde");
     }
     for (let j = 0; j < arr2.length; j++) {
-      for (let k = 0; k < 2; k++) {
+      for (let k = 0; k < 3; k++) {
         const referralCode = await generateReferralCode();
         const id = await generateId();
         // const random = Math.round(Math.random() * 1000);
@@ -290,7 +290,7 @@ export const users = async () => {
           "data-graph",
           {
             label: "User",
-            properties: `id: ${arr2[j]}, isQualified: false`,
+            properties: `id: ${arr2[j]}, isQualified: false,generationLevel:0`,
             referralCode: arr2[j],
           },
           {
@@ -301,7 +301,7 @@ export const users = async () => {
             label: "User",
             properties: ` id: ${id}, isQualified: ${
               id % 2 === 0
-            },referralCode:'${referralCode}',tier:0`,
+            },referralCode:'${referralCode}',tier:0 ,generationLevel:0`,
             id: id,
           }
         );
