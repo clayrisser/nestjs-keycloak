@@ -3,6 +3,11 @@ import { generation } from "./generation";
 
 let client: ApacheAgeClient;
 
+export enum Connection {
+  REFERRAL = "REFERRAL",
+  GENERATION = "GENERATION",
+}
+
 export async function ConnectToDatabase(
   databaseName: string,
   databaseHost: string,
@@ -44,7 +49,7 @@ export const dropGraph = async (graphName: string) => {
   const result = await client.executeCypher(` 
       SELECT COUNT(*) as count FROM ag_catalog.ag_graph WHERE name = '${graphName}';
   `);
-
+  console.log(result, "result");
   const count = result.rows[0].count;
 
   if (count === "1") {
@@ -81,7 +86,8 @@ export const createNodeAndEdge = async (
   toNode: any,
   tier: number
 ) => {
-  return await client.executeCypher(`
+  const result = await client.executeCypher(`
+  
         SELECT * FROM ag_catalog.cypher('${graphName}', $$
         MATCH (n)
         where n.referralCode='${referralCode}'
@@ -89,6 +95,8 @@ export const createNodeAndEdge = async (
         RETURN n,e,b
         $$) as (fromVertex agtype,Edge varchar,toVertex agtype);
         `);
+
+  return result;
 };
 
 export const findByReferralCode = async (
@@ -114,7 +122,6 @@ const findEdgeByLabel = async (graphName: string, label: string) => {
 };
 
 export const findEdgeByProperty = async (graphName: string, node: any) => {
-  console.log("from", node.from, "-[]->", node.to);
   return await client.executeCypher(`
         SELECT * FROM cypher('${graphName}', $$
           MATCH (m)
@@ -128,9 +135,14 @@ export const findEdgeByProperty = async (graphName: string, node: any) => {
 };
 
 export const createCustomEdge = async (graphName: string, nodes: any) => {
-  // const verifyEdge = await findEdgeByProperty(graphName, nodes);
-  // if (verifyEdge.rowCount === 0) {
-  return await client.executeCypher(`
+  const verifyEdge = await findEdgeBetweenNodes(
+    graphName,
+    { propertyName: nodes.propertyName, id: nodes.from },
+    { propertyName: nodes.propertyName, id: nodes.to },
+    nodes.label
+  );
+  if (!verifyEdge) {
+    return await client.executeCypher(`
         SELECT * FROM cypher('${graphName}', $$
             match(m)
             where m.${nodes.propertyName}=${nodes.from}
@@ -140,9 +152,9 @@ export const createCustomEdge = async (graphName: string, nodes: any) => {
             return m,r,n
         $$) as (fromNode agtype, relation agtype ,toNode agtype);
       `);
-  // } else {
-  //   return;
-  // }
+  } else {
+    return;
+  }
 };
 
 const registerUserWithRelationship = async (
@@ -158,7 +170,6 @@ const registerUserWithRelationship = async (
       graphName,
       fromNode.referralCode
     );
-    console.log("referalCode", referralCode);
 
     const suffix = "::vertex";
     const trimmedRows = referralCode.rows.map((row) => ({
@@ -214,6 +225,56 @@ export const generateId = async () => {
   }
 };
 
+// export const createMultipleUsers = async (graphName: string, user: any) => {
+//   return await client.executeCypher(`
+//   SELECT * FROM cypher('${graphName}', $$
+//   CREATE (n:${users.label} {${users.properties}})
+// }
+
+export const createNode = async (graphName: string, node: any) => {
+  return await client.executeCypher(`
+  SELECT * FROM cypher('${graphName}', $$
+  CREATE (n:${node.label} {${node.properties}})
+  RETURN n
+  $$) as (name agtype);
+`);
+};
+
+export const createMultipleUsers = async (
+  graphName: string,
+  fromNode: any,
+  toNode: any,
+  relation: string
+) => {
+  return await client.executeCypher(`
+  SELECT * FROM cypher('${graphName}', $$
+  CREATE (n:${fromNode.label} {${fromNode.properties}})
+  CREATE (m:${toNode.label} {${toNode.properties}})
+  CREATE (n)-[r:${relation}]->(m)
+  RETURN n,r,m
+  $$) as (fromNode agtype, relation agtype ,toNode agtype);
+`);
+};
+
+export const findEdgeBetweenNodes = async (
+  graphName: string,
+  fromNode: any,
+  toNode: any,
+  edgeName?: Connection
+) => {
+  const result = await client.executeCypher(`
+  SELECT * FROM cypher('${graphName}', $$
+          MATCH (n)
+          where n.${fromNode.propertyName}=${fromNode.id}
+          MATCH (m)
+          where m.${toNode.propertyName}=${toNode.id}
+          match (n)-[e]-(m)
+          Return label(e)
+  $$) as (e agtype);
+`);
+  return result.rows.find((row) => JSON.parse(row.e) === edgeName);
+};
+
 export const users = async () => {
   await ConnectToDatabase(
     "postgres",
@@ -236,7 +297,37 @@ export const users = async () => {
   //   })
   // );
 
-  const drop_graph = await dropGraph("data-graph");
+  // const drop_graph = await dropGraph("data-graph");
+
+  // const create_node = await createNode("data-graph", {
+  //   label: "user",
+  //   properties: " id: 25, referralCode: 'abcde' ,isQualified:false,tier:1",
+  // });
+
+  // console.log("create_node", create_node);
+
+  // const generateNodesAndEdges = await createMultipleUsers(
+  //   "data-graph",
+  //   {
+  //     label: "user",
+  //     properties: " id: 3, referralCode: 'abcde' ,isQualified:false,tier:1",
+  //   },
+  //   {
+  //     label: "user",
+  //     properties: " id: 4, referralCode: 'abcde' ,isQualified:false,tier:1",
+  //   },
+  //   "INFLUENCER"
+  // );
+  // console.log("generateNodesAndEdges", generateNodesAndEdges);
+
+  // const findingEdgeBetweenNodes = await findEdgeBetweenNodes(
+  //   "data-graph",
+  //   { propertyName: "id", id: 3 },
+  //   { propertyName: "id", id: 4 },
+  //   Connection.REFERRAL
+  // );
+  // console.log("findingEdgeBetweenNodes", findingEdgeBetweenNodes);
+
   // const referralCode = await generateReferralCode();
   // const id = await generateId();
 
@@ -267,49 +358,51 @@ export const users = async () => {
   // );
   // console.log("userWithRelationship", userWithRelationship);
 
-  let arr: string[] = [];
-  let arr2: string[] = [];
-  for (let i = 0; i < 4; i++) {
-    if (i === 0) {
-      const create_graph = await createGraph("data-graph");
-      console.log("create_graph", create_graph);
-      const user = await registerUser("data-graph", {
-        label: "User",
-        properties: `id: 2, referralCode: 'abcde' ,isQualified:false,tier:1,generationLevel:0`,
-      });
-      console.log("user", user);
-      arr2.push("abcde");
-    }
-    for (let j = 0; j < arr2.length; j++) {
-      for (let k = 0; k < 3; k++) {
-        const referralCode = await generateReferralCode();
-        const id = await generateId();
-        // const random = Math.round(Math.random() * 1000);
-        arr.push(referralCode);
-        const userWithRelationship = await registerUserWithRelationship(
-          "data-graph",
-          {
-            label: "User",
-            properties: `id: ${arr2[j]}, isQualified: false,generationLevel:0`,
-            referralCode: arr2[j],
-          },
-          {
-            influencer: [1, 2, 3],
-            edgeName: "REFERRAL",
-          },
-          {
-            label: "User",
-            properties: ` id: ${id}, isQualified: ${
-              id % 2 === 0
-            },referralCode:'${referralCode}',tier:0 ,generationLevel:0`,
-            id: id,
-          }
-        );
-        console.log("userWithRelationship", userWithRelationship);
-      }
-    }
-    arr2 = arr;
-    arr = [];
-  }
+  // const drop_graph = await dropGraph("data-graph");
+
+  // let arr: string[] = [];
+  // let arr2: string[] = [];
+  // for (let i = 0; i < 4; i++) {
+  //   if (i === 0) {
+  //     const create_graph = await createGraph("data-graph");
+  //     console.log("create_graph", create_graph);
+  //     const user = await registerUser("data-graph", {
+  //       label: "User",
+  //       properties: `id: 2, referralCode: 'abcde' ,isQualified:false,tier:1,generationLevel:0`,
+  //     });
+  //     console.log("user", user);
+  //     arr2.push("abcde");
+  //   }
+  //   for (let j = 0; j < arr2.length; j++) {
+  //     for (let k = 0; k < 3; k++) {
+  //       const referralCode = await generateReferralCode();
+  //       const id = await generateId();
+  //       // const random = Math.round(Math.random() * 1000);
+  //       arr.push(referralCode);
+  //       const userWithRelationship = await registerUserWithRelationship(
+  //         "data-graph",
+  //         {
+  //           label: "User",
+  //           properties: `id: ${arr2[j]}, isQualified: false,generationLevel:0`,
+  //           referralCode: arr2[j],
+  //         },
+  //         {
+  //           influencer: [1, 2, 3],
+  //           edgeName: Connection.REFERRAL,
+  //         },
+  //         {
+  //           label: "User",
+  //           properties: ` id: ${id}, isQualified: ${
+  //             id % 2 === 0
+  //           },referralCode:'${referralCode}',tier:0 ,generationLevel:0`,
+  //           id: id,
+  //         }
+  //       );
+  //       console.log("userWithRelationship", userWithRelationship);
+  //     }
+  //   }
+  //   arr2 = arr;
+  //   arr = [];
+  // }
   generation(client);
 };

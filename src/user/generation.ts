@@ -1,4 +1,4 @@
-import { createGraph, users, createCustomEdge } from "./users";
+import { createGraph, users, createCustomEdge, Connection } from "./users";
 
 const findMaxTier = async (client: any, graphName: string) => {
   const result = await client.executeCypher(`
@@ -64,7 +64,7 @@ export const updateProperty = async (
   graphName: string,
   nodes: any
 ) => {
-  console.log("nodes", nodes);
+  // console.log("nodes", nodes);
   return await client.executeCypher(`
         SELECT * FROM cypher('${graphName}', $$     
             match(n)
@@ -135,10 +135,10 @@ const goToEveryNode = async (
         generationData.gap
       ) {
         await createCustomEdge("data-graph", {
-          from: generationData.lastQualifiedId,
-          to: nextQualifiedId,
+          from: Number(generationData.lastQualifiedId),
+          to: Number(nextQualifiedId),
           propertyName: "id",
-          label: "GENERATION",
+          label: Connection.GENERATION,
         });
 
         await updateProperty(client, "data-graph", {
@@ -190,7 +190,7 @@ const goToEveryTree = async (
 
 export const generation = async (client: any) => {
   const getAllUsers = await findTheRootNodes(client, "data-graph");
-  console.log(getAllUsers);
+  // console.log(getAllUsers);
   const checkEveryTree = await goToEveryTree(client, "data-graph", getAllUsers);
   console.log("count", count);
   // const checkEveryNode = await goToEveryNode(client, "data-graph", 1);
