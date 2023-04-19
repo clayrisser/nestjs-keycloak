@@ -49,9 +49,7 @@ export const dropGraph = async (graphName: string) => {
   const result = await client.executeCypher(` 
       SELECT COUNT(*) as count FROM ag_catalog.ag_graph WHERE name = '${graphName}';
   `);
-  console.log(result, "result");
   const count = result.rows[0].count;
-
   if (count === "1") {
     return await client.executeCypher(`
     SELECT * FROM ag_catalog.drop_graph('${graphName}',true);
@@ -260,7 +258,7 @@ export const findEdgeBetweenNodes = async (
   graphName: string,
   fromNode: any,
   toNode: any,
-  edgeName?: Connection
+  edgeName: Connection
 ) => {
   const result = await client.executeCypher(`
   SELECT * FROM cypher('${graphName}', $$
@@ -273,6 +271,129 @@ export const findEdgeBetweenNodes = async (
   $$) as (e agtype);
 `);
   return result.rows.find((row) => JSON.parse(row.e) === edgeName);
+};
+
+async function automate() {
+  let arr: string[] = [];
+  let arr2: string[] = [];
+  for (let i = 0; i < 4; i++) {
+    if (i === 0) {
+      const create_graph = await createGraph("data-graph");
+      console.log("create_graph", create_graph);
+      const user = await registerUser("data-graph", {
+        label: "User",
+        properties: `id: 2, referralCode: 'abcde' ,isQualified:false,tier:1,generationLevel:0`,
+      });
+      console.log("user", user);
+      arr2.push("abcde");
+    }
+    for (let j = 0; j < arr2.length; j++) {
+      for (let k = 0; k < 3; k++) {
+        const referralCode = await generateReferralCode();
+        const id = await generateId();
+        // const random = Math.round(Math.random() * 1000);
+        arr.push(referralCode);
+        const userWithRelationship = await registerUserWithRelationship(
+          "data-graph",
+          {
+            label: "User",
+            properties: `id: ${arr2[j]}, isQualified: false,generationLevel:0`,
+            referralCode: arr2[j],
+          },
+          {
+            influencer: [1, 2, 3],
+            edgeName: Connection.REFERRAL,
+          },
+          {
+            label: "User",
+            properties: ` id: ${id}, isQualified: ${
+              id % 2 === 0
+            },referralCode:'${referralCode}',tier:0 ,generationLevel:0`,
+            id: id,
+          }
+        );
+        console.log("userWithRelationship", userWithRelationship);
+      }
+    }
+    arr2 = arr;
+    arr = [];
+  }
+}
+
+// export const getAllData = async (graphName: string) => {
+//   return await client.executeCypher(`
+// SELECT * FROM cypher('${graphName}', $$
+// MATCH (n)-[r]-(m)
+// RETURN n,r,m
+// $$) as (fromNode agtype, relation agtype ,toNode agtype)
+// UNION
+// SELECT * FROM cypher('${graphName}', $$
+// MATCH (n)
+// WHERE NOT (n)-[]-()
+// RETURN n as node_without_relations, null as relation, null as toNode
+// $$) as (node_without_relations agtype, relation agtype ,toNode agtype)
+// `);
+// };
+
+// export const getAllData = async (graphName: string) => {
+//   return await client.executeCypher(`
+//    SELECT * FROM cypher('${graphName}', $$
+//    MATCH (n)-[r]->(m)
+//    WITH DISTINCT n,r,m
+//    RETURN n,r,m
+//    $$) as (fromNode agtype, relation agtype ,toNode agtype)
+//    UNION
+//    SELECT * FROM cypher('${graphName}', $$
+//    MATCH (n)
+//    OPTIONAL MATCH (n)-[]-()
+//    WITH DISTINCT n
+//    RETURN n as node_without_relations, null as relation, null as toNode
+//    $$) as (node_without_relations agtype, relation agtype ,toNode agtype)
+// `);
+// };
+
+// export const getAllData = async (graphName: string) => {
+//   return await client.executeCypher(`
+//     SELECT * FROM cypher('${graphName}', $$
+//     MATCH (n)
+//     OPTIONAL MATCH (n)-[r]-()
+//     RETURN DISTINCT n, r
+//     $$) as (fromNode agtype, relation agtype )
+// `);
+// };
+
+// export const getAllData = async (graphName: string) => {
+//   return await client.executeCypher(`
+//     SELECT * FROM cypher('${graphName}', $$
+//        MATCH (n)
+//     OPTIONAL MATCH (n)-[r]->(m)
+//     WHERE STARTNODE(r) IS NOT NULL AND ENDNODE(r) IS NOT NULL
+//     RETURN DISTINCT n, r, m
+//     UNION
+//     MATCH (n)
+//     OPTIONAL MATCH (n)-[]-()
+//     WHERE NOT EXISTS {
+//       (n)-[:]->()
+//     }
+//     RETURN DISTINCT n, null as r, null as m
+//     $$) as (fromNode agtype, relation agtype ,toNode agtype)
+//   `);
+// };
+
+export const getAllData = async (graphName: string) => {
+  return await client.executeCypher(`
+    SELECT * FROM cypher('${graphName}', $$
+      MATCH (n)
+      OPTIONAL MATCH (n)-[r]->(m)
+      WHERE STARTNODE(r) IS NOT NULL AND ENDNODE(r) IS NOT NULL
+      RETURN DISTINCT n, r, m
+      UNION
+      MATCH (n)
+      OPTIONAL MATCH (n)-[]-()
+      OPTIONAL MATCH (n)-[:]->()
+      RETURN DISTINCT n as node_without_relations, null as r, null as m
+    $$) as (fromNode agtype, relation agtype, toNode agtype)
+  `);
 };
 
 export const users = async () => {
@@ -293,11 +414,13 @@ export const users = async () => {
   // console.log(
   //   await registerUser("data-graph", {
   //     label: "user",
-  //     properties: " id: 2, referralCode: 'abcde' ,isQualified:false,tier:1",
+  //     properties:
+  //       " id: 2, referralCode: 'abcde' ,isQualified:false,tier:1,generationLevel:0",
   //   })
   // );
 
   // const drop_graph = await dropGraph("data-graph");
+  // await automate();
 
   // const create_node = await createNode("data-graph", {
   //   label: "user",
@@ -358,51 +481,8 @@ export const users = async () => {
   // );
   // console.log("userWithRelationship", userWithRelationship);
 
-  // const drop_graph = await dropGraph("data-graph");
+  const getAllUserData = await getAllData("data-graph");
+  console.log("getAllUserData", getAllUserData);
 
-  // let arr: string[] = [];
-  // let arr2: string[] = [];
-  // for (let i = 0; i < 4; i++) {
-  //   if (i === 0) {
-  //     const create_graph = await createGraph("data-graph");
-  //     console.log("create_graph", create_graph);
-  //     const user = await registerUser("data-graph", {
-  //       label: "User",
-  //       properties: `id: 2, referralCode: 'abcde' ,isQualified:false,tier:1,generationLevel:0`,
-  //     });
-  //     console.log("user", user);
-  //     arr2.push("abcde");
-  //   }
-  //   for (let j = 0; j < arr2.length; j++) {
-  //     for (let k = 0; k < 3; k++) {
-  //       const referralCode = await generateReferralCode();
-  //       const id = await generateId();
-  //       // const random = Math.round(Math.random() * 1000);
-  //       arr.push(referralCode);
-  //       const userWithRelationship = await registerUserWithRelationship(
-  //         "data-graph",
-  //         {
-  //           label: "User",
-  //           properties: `id: ${arr2[j]}, isQualified: false,generationLevel:0`,
-  //           referralCode: arr2[j],
-  //         },
-  //         {
-  //           influencer: [1, 2, 3],
-  //           edgeName: Connection.REFERRAL,
-  //         },
-  //         {
-  //           label: "User",
-  //           properties: ` id: ${id}, isQualified: ${
-  //             id % 2 === 0
-  //           },referralCode:'${referralCode}',tier:0 ,generationLevel:0`,
-  //           id: id,
-  //         }
-  //       );
-  //       console.log("userWithRelationship", userWithRelationship);
-  //     }
-  //   }
-  //   arr2 = arr;
-  //   arr = [];
-  // }
-  generation(client);
+  // generation(client);
 };

@@ -190,7 +190,7 @@ const goToEveryTree = async (
 
 export const generation = async (client: any) => {
   const getAllUsers = await findTheRootNodes(client, "data-graph");
-  // console.log(getAllUsers);
+  console.log(getAllUsers);
   const checkEveryTree = await goToEveryTree(client, "data-graph", getAllUsers);
   console.log("count", count);
   // const checkEveryNode = await goToEveryNode(client, "data-graph", 1);
