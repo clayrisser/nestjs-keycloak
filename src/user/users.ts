@@ -352,15 +352,82 @@ async function automate() {
 // `);
 // };
 
-// export const getAllData = async (graphName: string) => {
-//   return await client.executeCypher(`
-//     SELECT * FROM cypher('${graphName}', $$
-//     MATCH (n)
-//     OPTIONAL MATCH (n)-[r]-()
-//     RETURN DISTINCT n, r
-//     $$) as (fromNode agtype, relation agtype )
-// `);
-// };
+export const getAllData = async (graphName: string) => {
+  return await client.executeCypher(`
+    SELECT * FROM cypher('${graphName}', $$
+    MATCH (n)-[e]-(m)
+    RETURN e
+    $$) as (fromNode agtype)
+    UNION
+    SELECT * FROM cypher('${graphName}', $$
+    MATCH (e)
+    where e.tier=1
+    Return e
+    $$) as (fromNode agtype)
+`);
+};
+
+export const filterAndCreateNewGraph = async (
+  graphName: string,
+  node: any,
+  // edgeName: string,
+  newGraphName: string
+) => {
+  const checkIsQualified = await client.executeCypher(`
+  SELECT * FROM cypher('${graphName}',$$
+  MATCH (n)
+  where n.${node.property}=${node.value}
+  RETURN n as node
+  $$) as (node agtype)`);
+  if (checkIsQualified.rows.length > 0) {
+    console.log(1);
+    const result = await client.executeCypher(`
+      SELECT COUNT(*) as count FROM ag_catalog.ag_graph WHERE name = '${newGraphName}';
+  `);
+    console.log(2);
+    if (result.rows[0].count === "0") {
+      await createGraph(newGraphName);
+    }
+    console.log(3);
+    console.log("checkIsQualified", checkIsQualified);
+    // const parsedNode = checkIsQualified.rows.map((row) =>
+    //   JSON.parse(row.node.slice(0, -8))
+    // );
+    // // rows[0].node.slice(0, -8));
+    // console.log("parsedNode", parsedNode);
+    // console.log(
+    //   "properties",
+    //   JSON.stringify(parsedNode[0].node)
+    //     .replace(/[{}"]/g, "")
+    //     .replace(/,/g, ", ")
+    //     .replace(/:/g, ":")
+    // );
+    const parsedNode = JSON.parse(checkIsQualified.rows[0].node.slice(0, -8));
+
+    console.log("parsedNode", parsedNode);
+
+    const properties = JSON.stringify(parsedNode.properties, (key, value) => {
+      return typeof value === "string"
+        ? `"${value.replace(/\\/g, '\\"')}"`
+        : value;
+    })
+      .replace(/[{}"]/g, "")
+      .replace(/:/g, ": ")
+      .replace(/,/g, ", ");
+    console.log("properties", properties);
+
+    const createNode = await client.executeCypher(`
+    SELECT * FROM cypher('${newGraphName}',$$
+   create (n:${parsedNode.label} {${JSON.stringify(parsedNode.properties)
+      .replace(/[{}"]/g, "")
+      .replace(/,/g, ", ")
+      .replace(/:/g, ":")}})
+    RETURN n as node
+  $$) as (node agtype)`);
+    console.log("newNode", createNode);
+  }
+  return checkIsQualified;
+};
 
 // export const getAllData = async (graphName: string) => {
 //   return await client.executeCypher(`
@@ -380,21 +447,21 @@ async function automate() {
 //   `);
 // };
 
-export const getAllData = async (graphName: string) => {
-  return await client.executeCypher(`
-    SELECT * FROM cypher('${graphName}', $$
-      MATCH (n)
-      OPTIONAL MATCH (n)-[r]->(m)
-      WHERE STARTNODE(r) IS NOT NULL AND ENDNODE(r) IS NOT NULL
-      RETURN DISTINCT n, r, m
-      UNION
-      MATCH (n)
-      OPTIONAL MATCH (n)-[]-()
-      OPTIONAL MATCH (n)-[:]->()
-      RETURN DISTINCT n as node_without_relations, null as r, null as m
-    $$) as (fromNode agtype, relation agtype, toNode agtype)
-  `);
-};
+// export const getAllData = async (graphName: string) => {
+//   return await client.executeCypher(`
+//     SELECT * FROM cypher('${graphName}', $$
+//       MATCH (n)
+//       OPTIONAL MATCH (n)-[r]->(m)
+//       WHERE STARTNODE(r) IS NOT NULL AND ENDNODE(r) IS NOT NULL
+//       RETURN DISTINCT n, r, m
+//       UNION
+//       MATCH (n)
+//       OPTIONAL MATCH (n)-[]-()
+//       OPTIONAL MATCH (n)-[:]->()
+//       RETURN DISTINCT n as node_without_relations, null as r, null as m
+//     $$) as (fromNode agtype, relation agtype, toNode agtype)
+//   `);
+// };
 
 export const users = async () => {
   await ConnectToDatabase(
@@ -422,6 +489,15 @@ export const users = async () => {
   // const drop_graph = await dropGraph("data-graph");
   // await automate();
 
+  const filterbyProperty = await filterAndCreateNewGraph(
+    "data-graph",
+    {
+      property: "isQualified",
+      value: false,
+    },
+    "new-filtered-graph"
+  );
+  console.log("filteredByProp", filterbyProperty);
   // const create_node = await createNode("data-graph", {
   //   label: "user",
   //   properties: " id: 25, referralCode: 'abcde' ,isQualified:false,tier:1",
@@ -482,7 +558,7 @@ export const users = async () => {
   // console.log("userWithRelationship", userWithRelationship);
 
   const getAllUserData = await getAllData("data-graph");
-  console.log("getAllUserData", getAllUserData);
+  console.log("getAllUserData", getAllUserData.rowCount);
 
   // generation(client);
 };
