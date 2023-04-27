@@ -390,44 +390,85 @@ export const filterAndCreateNewGraph = async (
     }
     console.log(3);
     console.log("checkIsQualified", checkIsQualified);
-    // const parsedNode = checkIsQualified.rows.map((row) =>
-    //   JSON.parse(row.node.slice(0, -8))
-    // );
-    // // rows[0].node.slice(0, -8));
-    // console.log("parsedNode", parsedNode);
-    // console.log(
-    //   "properties",
-    //   JSON.stringify(parsedNode[0].node)
-    //     .replace(/[{}"]/g, "")
-    //     .replace(/,/g, ", ")
-    //     .replace(/:/g, ":")
-    // );
-    const parsedNode = JSON.parse(checkIsQualified.rows[0].node.slice(0, -8));
 
+    const parsedNode = checkIsQualified.rows.map((row) =>
+      JSON.parse(row.node.slice(0, -8))
+    );
     console.log("parsedNode", parsedNode);
 
-    const properties = JSON.stringify(parsedNode.properties, (key, value) => {
-      return typeof value === "string"
-        ? `"${value.replace(/\\/g, '\\"')}"`
-        : value;
-    })
-      .replace(/[{}"]/g, "")
-      .replace(/:/g, ": ")
-      .replace(/,/g, ", ");
-    console.log("properties", properties);
-
-    const createNode = await client.executeCypher(`
-    SELECT * FROM cypher('${newGraphName}',$$
-   create (n:${parsedNode.label} {${JSON.stringify(parsedNode.properties)
-      .replace(/[{}"]/g, "")
-      .replace(/,/g, ", ")
-      .replace(/:/g, ":")}})
-    RETURN n as node
-  $$) as (node agtype)`);
-    console.log("newNode", createNode);
+    const createQuery = parsedNode.map((node) => {
+      const properties = JSON.stringify(node.properties, (key, value) => {
+        return typeof value === "string"
+          ? `'${value.replace(/'/g, "'")}'`
+          : value;
+      })
+        .replace(/[{}"]/g, "")
+        .replace(/:/g, ": ")
+        .replace(/,/g, ", ")
+        .replace(/\\/g, "");
+      return `CREATE (n:${node.label} {${properties}})`;
+    });
+    for (const query of createQuery) {
+      const createNode = await client.executeCypher(`
+      SELECT * FROM cypher('${newGraphName}',$$
+      ${query}
+       RETURN n as node
+    $$) as (node agtype)`);
+      console.log("newNode", createNode);
+    }
+    return checkIsQualified;
   }
-  return checkIsQualified;
 };
+
+// export const filterAndCreateNewGraph = async (
+//   graphName: string,
+//   node: any,
+//   newGraphName: string
+// ) => {
+//   const createQuery = `WITH cypher('${graphName}',$$
+//   MATCH (n)
+//   where n.${node.property}=${node.value}
+//   RETURN n as node
+//   $$) as qualifiedNodes
+//   UNWIND qualifiedNodes.rows as row
+//   WITH apoc.convert.fromJsonMap(apoc.text.replace(row.node, 'Node', 'n')) as n
+//   CREATE (m:${node.label} {properties: n.properties})`;
+
+//   const result = await client.executeCypher(`
+//     SELECT COUNT(*) as count FROM ag_catalog.ag_graph WHERE name = '${newGraphName}';
+//   `);
+
+//   if (result.rows[0].count === "0") {
+//     await createGraph(newGraphName);
+//   }
+
+//   const createNode = await client.executeCypher(`
+//     WITH cypher('${newGraphName}',$$
+//     ${createQuery}
+//     RETURN m as node
+//     $$) as (node agtype)
+//     RETURN node
+//   `);
+
+//   console.log("newNode", createNode);
+
+//   return createNode;
+// };
+
+// export const exampleWithCte = async (graphName: string) => {
+//     `WITH graph_query as (
+//       SELECT * FROM cypher('${graphName}', $$
+//       MATCH (n)-[e]-(m)
+//       RETURN n as node
+//     ) as (fromNode agtype)
+//     SELECT * FROM graph_query
+//       where n.id = 123
+//       return n
+//     )
+
+//     `
+
+// }
 
 // export const getAllData = async (graphName: string) => {
 //   return await client.executeCypher(`
