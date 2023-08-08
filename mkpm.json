@@ -1,0 +1,13 @@
+{
+  "packages": {
+    "default": {
+      "envcache": "0.3.0",
+      "dotenv": "0.0.14",
+      "gnu": "0.1.0",
+      "docker": "0.2.0"
+    }
+  },
+  "repos": {
+    "default": "https://gitlab.com/bitspur/mkpm/packages.git"
+  }
+}

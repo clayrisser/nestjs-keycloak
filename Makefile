@@ -1,18 +1,8 @@
-include mkpm.mk
-ifneq (,$(MKPM_READY))
-include $(MKPM)/gnu
-include $(MKPM)/dotenv
-include $(MKPM)/envcache
+.ONESHELL:
+.POSIX:
+.SILENT:
 
-TS_NODE ?= node_modules/.bin/ts-node
-
-.PHONY: docker/%
-docker/%:
-	@$(MAKE) -sC docker $(subst docker/,,$@) ARGS=$(ARGS)
-
-.PHONY: start
-start:
-	@$(TS_NODE) src/index.ts		
-#	@$(TS_NODE) src/methods/index.ts
-#	@$(TS_NODE) src/mani.ts
-endif
+MKPM := ./mkpm
+.PHONY: %
+%:
+	@$(MKPM) "$@" $(ARGS)

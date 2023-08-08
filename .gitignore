@@ -5,7 +5,4 @@
 /node_modules
 
 # mkpm
-.mkpm/*
-**/.mkpm/*
-!/.mkpm/.cache.tar.gz
-!/.mkpm/.bootstrap.mk
+.mkpm/mkpm
