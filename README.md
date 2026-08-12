@@ -9,37 +9,35 @@ the several awesome enhancements as well as support for [TypeGraphQL](https://ty
 This makes it possible to use this with projects such as [typegraphql-nestjs](https://www.npmjs.com/package/typegraphql-nestjs)
 and [typegraphql-prisma](https://www.npmjs.com/package/typegraphql-prisma).
 
-There are several key decisions in the architecture that differ from [nest-keycloak-connect](https://www.npmjs.com/package/nest-keycloak-connect). Most of these decisions were made to increase compatibility with [TypeGraphQL](https://typegraphql.com). The most obvious difference is that all
+There are several key decisions in the architecture that differ from [nest-keycloak-connect](https://www.npmjs.com/package/nest-keycloak-connect). The most obvious difference is that all
 the controllers and resolvers are public by default, unless a decorator explicitly annotates a class or method. Another key difference is that
 the `@Roles()` decorator is replaced with [`@Authorized()`](src/decorators/authorized.decorator.ts). It works basically the same way as the
-TypeGraphQL `@Authorized()` decorator.
-
-[src/decorators/authorized.decorator.ts](src/decorators/authorized.decorator.ts)
-
-[https://typegraphql.com/docs/authorization.html](https://typegraphql.com/docs/authorization.html)
+TypeGraphQL [`@Authorized()`](https://typegraphql.com/docs/authorization.html) decorator.
 
 There are also some enhancements such as the ability to use a union or intersection of roles.
 
 Another key enhancement is the automatic registration of resources, roles and scopes with KeyCloak during the bootstrapping of the application.
 
-https://gitlab.com/risserlabs/nestjs/nestjs-keycloak/blob/main/src/keycloakRegister.service.ts#L170
+## Requirements
+
+| dependency | version           |
+| ---------- | ----------------- |
+| node       | `>=20`            |
+| nestjs     | `^11.0.0`         |
+| keycloak   | `26.x` (or newer) |
 
 ## Installation
 
 ```sh
-npm install --save nestjs-keycloak
+pnpm add @risserlabs/nestjs-keycloak
 ```
-
-## Support
-
-Submit an [issue](https://gitlab.com/risserlabs/nestjs/nestjs-keycloak/issues/new)
 
 ## Usage
 
 Here is a basic example of how to use this.
 
 ```ts
-import KeycloakModule from 'nestjs-keycloak';
+import KeycloakModule from '@risserlabs/nestjs-keycloak';
 ```
 
 ```ts
@@ -65,7 +63,7 @@ KeycloakModule.registerAsync({
 
 ### Unions and Intersections
 
-You can specify a union of roles by using an array. The following example
+You can specify an intersection of roles by using an array. The following example
 means a user must have the roles `one`, `two` and `three`.
 
 ```ts
@@ -76,7 +74,7 @@ getCats() {
 }
 ```
 
-You can specify an intersection of roles as well. The following example
+You can specify a union of roles as well. The following example
 means a user must have at least the role `one`, `two` or `three`.
 
 ```ts
@@ -112,30 +110,18 @@ getCats() {
 }
 ```
 
-### TypeGraphQL
-
-If you also want to add typegraphql support, you can add the following . . .
-
-```ts
-import KeycloakTypegraphql from 'nestjs-keycloak-typegraphql';
-```
-
-```ts
-KeycloakTypegraphql.register({});
-```
-
 ### Decorators
 
-https://gitlab.com/risserlabs/nestjs/nestjs-keycloak/tree/main/src/decorators
+You can find all of the available decorators at [src/decorators](src/decorators).
 
 ### KeyCloak Registration
 
 One of the really cool things about this project is the automatic registration of
 roles, resources and scopes with keycloak. This will only work if you provide
-the `adminUser` and `adminPassword` configuration.
+the `adminUsername` and `adminPassword` configuration.
 
 If you want to log the registration api calls to KeyCloak during the application bootstrap, you can setup
-[nestjs-axios-logger](https://www.npmjs.com/package/nestjs-axios-logger) as demonstrated below.
+[nestjs-axios-logger](https://www.npmjs.com/package/nestjs-axios-logger).
 
 ### KeyCloak Service
 
@@ -147,31 +133,63 @@ with the refresh token if it finds it was expired.
 
 `await keycloakService.getUser()` gets the keycloak user from the keycloak server. This will
 include all the information about the user including their custom properties. This will only
-work if the `adminUser` and `adminPassword` settings are configured. If you are trying
+work if the `adminUsername` and `adminPassword` settings are configured. If you are trying
 to get information about the user that is contained in the token, it is better to directly
 get the information from the token rather then using this method because it makes an api
 call to the keycloak server.
 
 `await keycloakService.getUserInfo()` gets the user info from the access token. It is better
 to use this method instead of `getUser()` when trying to access information such as the username
-or email, because it does not require `adminUser` or `adminPassword` settings configured and because
+or email, because it does not require `adminUsername` or `adminPassword` settings configured and because
 it does not make an api call to the server.
 
-You can find all of the available methods at the link below.
+You can find all of the available methods at [src/keycloak.service.ts](src/keycloak.service.ts).
 
-https://gitlab.com/risserlabs/nestjs/nestjs-keycloak/blob/main/src/keycloak.service.ts
+## Development
 
-### Example
+The toolchain is pinned with [asdf](https://asdf-vm.com) and driven by make.
 
-You can find a full example at the link below.
+```sh
+make prepare          # one time system setup (asdf toolchain + pnpm install)
+make build            # compile to lib/
+make lint             # oxfmt --check + oxlint + tsc --noEmit
+make format           # oxfmt
+make test/unit        # vitest unit tests with coverage
+make test/integration # vitest against a real keycloak container (requires docker)
+make test             # unit + integration
+```
 
-https://gitlab.com/clayrisser/nestjs-example/blob/main/src/app.ts
+The integration tests spin up a real [Keycloak](https://www.keycloak.org) container
+(`quay.io/keycloak/keycloak` in `start-dev` mode, see [docker/compose.yaml](docker/compose.yaml)),
+provision a realm, client and users, and exercise token validation, guards, role checks and
+the automatic registration flow end to end. Set `KEEP_KEYCLOAK=1` to leave the container
+running after the tests for poking around. The container can also be managed directly with
+`make docker/up-d`, `make docker/logs` and `make docker/down`.
+
+## Version Notes
+
+- **keycloak-connect** is pinned to `26.1.1`, the final release line of the upstream
+  [Node.js adapter](https://www.keycloak.org/securing-apps/nodejs-adapter), which Keycloak has
+  deprecated. It still validates tokens issued by current Keycloak servers (tested against
+  Keycloak 26.x). The grant management core of this library is built on it, so replacing it
+  will be a separate breaking change.
+- **@keycloak/keycloak-admin-client** `26.x` is esm-only, so it is loaded lazily with a dynamic
+  `import()`. This package itself remains commonjs and can be consumed from both commonjs and esm.
+- The typegraphql specific parameter decorator implementation moved out of this package. The
+  inject decorators (`@InjectAccessToken()`, `@InjectRoles()`, ...) are now standard
+  [nestjs param decorators](https://docs.nestjs.com/custom-decorators) that also resolve the
+  request from a graphql execution context when [@nestjs/graphql](https://www.npmjs.com/package/@nestjs/graphql)
+  (an optional peer dependency) is installed.
+
+## Support
+
+Submit an [issue](https://gitlab.com/bitspur/nestjs-keycloak/issues/new)
 
 ## License
 
 [Apache-2.0 License](LICENSE)
 
-[Risser Labs LLC](https://risserlabs.com) © 2021
+[Clay Risser](https://clayrisser.com) © 2021
 
 ## Credits
 
