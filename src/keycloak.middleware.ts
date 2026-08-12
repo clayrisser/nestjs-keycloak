@@ -24,20 +24,24 @@
 
 import type { NestMiddleware } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type { Request, Response, NextFunction } from 'express';
 import KeycloakService from './keycloak.service';
 
 @Injectable()
 export default class KeycloakMiddleware implements NestMiddleware {
+  private readonly logger = new Logger(KeycloakMiddleware.name);
+
   constructor(@Inject(KeycloakService) private readonly keycloakService: KeycloakService) {}
 
   async use(_req: Request, _res: Response, next: NextFunction) {
     try {
       await this.keycloakService.getGrant();
-      return next();
     } catch (err) {
-      return next(err);
+      // invalid or expired credentials resolve to an anonymous request here;
+      // guards decide whether the route actually requires authentication
+      this.logger.verbose(`failed to resolve grant: ${(err as Error).message}`);
     }
+    return next();
   }
 }

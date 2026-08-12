@@ -22,7 +22,7 @@
  * limitations under the License.
  */
 
-import random from 'random';
+import { randomBytes } from 'crypto';
 import { RENDER_METADATA } from '@nestjs/common/constants';
 import type { Request, Response } from 'express';
 import type { ArgumentsHost, ExceptionFilter } from '@nestjs/common';
@@ -33,8 +33,6 @@ import { getBaseUrl } from './authorizationCallback.decorator';
 import { getGlobalRegistrationMap } from '../keycloakRegister.service';
 
 export const AUTHORIZED = 'KEYCLOAK_AUTHORIZED';
-
-const randomUniform = random.uniform();
 
 export const Authorized = (...roles: (string | string[])[]) => {
   return applyDecorators(SetMetadata(AUTHORIZED, roles || []), UseFilters(UnauthorizedFilter));
@@ -61,7 +59,7 @@ export class UnauthorizedFilter implements ExceptionFilter {
           redirect_uri: `${callbackEndpoint}?destination_uri=${encodeURIComponent(`${baseUrl}${req.originalUrl}`)}`,
           response_type: 'code',
           scope: 'openid',
-          state: randomUniform().toString().substr(2, 8),
+          state: randomBytes(8).toString('hex'),
         }).toString()}`,
       );
     }

@@ -23,12 +23,10 @@
  */
 
 import type { ExecutionContext } from '@nestjs/common';
-import { createParamDecorator } from '@risserlabs/typegraphql-nestjs';
+import { createParamDecorator } from '@nestjs/common';
 import { getReq } from '../util';
 
-export function InjectGrant() {
-  return createParamDecorator((_data?: unknown, ctx?: ExecutionContext, resolverData?: any) => {
-    const req = getReq(ctx || resolverData?.context);
-    return req?.kauth?.grant;
-  });
-}
+export const InjectGrant = createParamDecorator((_data: unknown, context: ExecutionContext) => {
+  const req = getReq(context);
+  return req?.kauth?.grant;
+});

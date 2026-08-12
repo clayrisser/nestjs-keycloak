@@ -24,8 +24,10 @@
 
 import Token from 'keycloak-connect/middleware/auth-utils/token';
 import qs from 'qs';
-import type KcAdminClient from '@keycloak/keycloak-admin-client';
-import type UserRepresentation from '@keycloak/keycloak-admin-client/lib/defs/userRepresentation';
+import type KcAdminClient from '@keycloak/keycloak-admin-client' with { 'resolution-mode': 'import' };
+import type UserRepresentation from '@keycloak/keycloak-admin-client/lib/defs/userRepresentation.js' with {
+  'resolution-mode': 'import',
+};
 import type { AxiosError } from 'axios';
 import type { ExecutionContext } from '@nestjs/common';
 import type { Grant, Keycloak } from 'keycloak-connect';

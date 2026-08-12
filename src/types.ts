@@ -27,7 +27,9 @@ import type { Grant } from 'keycloak-connect';
 import type { ModuleMetadata } from '@nestjs/common/interfaces';
 import type { Reflector } from '@nestjs/core';
 import type { Request, Response } from 'express';
-import type { RequiredActionAlias } from '@keycloak/keycloak-admin-client/lib/defs/requiredActionProviderRepresentation';
+import type { RequiredActionAlias } from '@keycloak/keycloak-admin-client/lib/defs/requiredActionProviderRepresentation.js' with {
+  'resolution-mode': 'import',
+};
 import type { ResourceAccess } from 'keycloak-connect/middleware/auth-utils/token';
 import { ApiProperty } from '@nestjs/swagger';
 import type KeycloakService from './keycloak.service';

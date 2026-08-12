@@ -41,9 +41,7 @@ const KeycloakProvider: FactoryProvider<Keycloak> = {
       clientId,
       realm,
       serverUrl: options.baseUrl,
-      credentials: {
-        ...(clientSecret ? { secret: clientSecret } : {}),
-      },
+      credentials: clientSecret ? { secret: clientSecret } : {},
     } as unknown as any);
     keycloak.accessDenied = (req: KeycloakRequest<Request>, _res: Response, next: NextFunction) => {
       req.resourceDenied = true;

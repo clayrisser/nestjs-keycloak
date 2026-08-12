@@ -30,7 +30,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { UseInterceptors } from '@nestjs/common';
 import { applyDecorators, SetMetadata } from '@nestjs/common';
-import { get } from 'lodash';
+import get from 'lodash/get';
 import KeycloakService from '../keycloak.service';
 
 export const ONLY_OWNER = 'KEYCLOAK_ONLY_OWNER';

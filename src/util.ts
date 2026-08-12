@@ -28,10 +28,9 @@ import type { KeycloakRequest, GraphqlCtx } from './types';
 
 let nestjsGraphql: any;
 try {
-  // eslint-disable-next-line global-require
   nestjsGraphql = require('@nestjs/graphql');
-} catch (err) {
-  // void
+} catch {
+  // @nestjs/graphql is an optional peer dependency
 }
 
 export function getReq(

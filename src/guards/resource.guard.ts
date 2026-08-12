@@ -22,7 +22,7 @@
  * limitations under the License.
  */
 
-import type KcAdminClient from '@keycloak/keycloak-admin-client';
+import type KcAdminClient from '@keycloak/keycloak-admin-client' with { 'resolution-mode': 'import' };
 import { HttpService } from '@nestjs/axios';
 import type { Keycloak } from 'keycloak-connect';
 import { Reflector } from '@nestjs/core';

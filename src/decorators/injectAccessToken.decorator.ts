@@ -24,14 +24,12 @@
 
 import type Token from 'keycloak-connect/middleware/auth-utils/token';
 import type { ExecutionContext } from '@nestjs/common';
-import { createParamDecorator } from '@risserlabs/typegraphql-nestjs';
+import { createParamDecorator } from '@nestjs/common';
 import { getReq } from '../util';
 
-export function InjectAccessToken() {
-  return createParamDecorator((_data?: unknown, ctx?: ExecutionContext, resolverData?: any) => {
-    const req = getReq(ctx || resolverData?.context);
-    if (!req?.kauth?.grant?.access_token) return;
-    const accessToken = req.kauth.grant.access_token as Token;
-    return accessToken.token;
-  });
-}
+export const InjectAccessToken = createParamDecorator((_data: unknown, context: ExecutionContext) => {
+  const req = getReq(context);
+  if (!req?.kauth?.grant?.access_token) return undefined;
+  const accessToken = req.kauth.grant.access_token as Token;
+  return accessToken.token;
+});
