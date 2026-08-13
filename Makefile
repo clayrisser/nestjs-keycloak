@@ -1,136 +1,82 @@
-# File: /Makefile
-# Project: nestjs-axios-logger
-# File Created: 23-10-2022 05:07:14
-# Author: Risser Labs LLC <info@risserlabs.com>
-# -----
-# Last Modified: 25-10-2022 13:58:46
-# Modified By: Clay Risser
-# -----
-# Risser Labs LLC (c) Copyright 2021 - 2022
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+.POSIX:
+export ROOTDIR ?= $(eval ROOTDIR := $(shell git rev-parse --show-toplevel))$(ROOTDIR)
+include $(ROOTDIR)/make.mk
 
-include mkpm.mk
-ifneq (,$(MKPM_READY))
-include $(MKPM)/gnu
-include $(MKPM)/mkchain
-include $(MKPM)/yarn
-include $(MKPM)/envcache
-include $(MKPM)/dotenv
+.DEFAULT_GOAL := build
 
-export BABEL ?= $(call yarn_binary,babel)
-export BABEL_NODE ?= $(call yarn_binary,babel-node)
-export BROWSERSLIST_BINARY ?= $(call yarn_binary,browserslist)
-export CLOC ?= cloc
-export CSPELL ?= $(call yarn_binary,cspell)
-export ESLINT ?= $(call yarn_binary,eslint)
-export JEST ?= $(call yarn_binary,jest)
-export PRETTIER ?= $(call yarn_binary,prettier)
-export TSC ?= $(call yarn_binary,tsc)
+ASDF_VERSION ?= v0.18.0
+.PHONY: prepare prepare/asdf prepare/cloc
+prepare: sudo
+	@command -v asdf >/dev/null 2>&1 || $(MAKE) prepare/asdf
+	@command -v cloc >/dev/null 2>&1 || $(MAKE) prepare/cloc
+	@awk '!/^#/ && NF {print $$1}' .tool-versions | \
+		while read t; do asdf plugin add "$$t" 2>/dev/null || true; done
+	@rcfile=$$(mktemp); \
+		{ asdf install 2>&1; echo $$? >$$rcfile; } | grep --line-buffered -v 'is already installed' || true; \
+		rc=$$(cat $$rcfile); rm -f $$rcfile; exit $$rc
+	@$(PNPM) install
+prepare/asdf:
+	@command -v brew >/dev/null 2>&1 && brew install asdf || { \
+		o=$$(uname | tr A-Z a-z); a=$$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/'); \
+		curl -fsSL "https://github.com/asdf-vm/asdf/releases/download/$(ASDF_VERSION)/asdf-$(ASDF_VERSION)-$$o-$$a.tar.gz" \
+			| $(SUDO) tar -xz -C /usr/local/bin asdf; \
+	}
+prepare/cloc:
+	@$(PKG_INSTALL) cloc
 
-export NPM_AUTH_TOKEN ?= $(shell $(CAT) $(HOME)/.docker/config.json 2>$(NULL) | \
-	$(JQ) -r '.auths["registry.gitlab.com"].auth' | $(BASE64_NOWRAP) -d | $(CUT) -d':' -f2)
+.PHONY: configure
+configure:
+	@for cmd in asdf node $(PNPM) docker $(CLOC); do \
+		command -v $$cmd >/dev/null 2>&1 || { echo "$$cmd is missing, run \`make prepare\`"; exit 1; }; \
+	done
 
-ACTIONS += install
-$(ACTION)/install: package.json
-	@$(YARN) install $(ARGS)
-	@$(call done,install)
+.PHONY: deps ~deps
+~deps: node_modules/.modules.yaml
+node_modules/.modules.yaml: package.json pnpm-lock.yaml
+	@$(MAKE) deps
+deps: FORCE
+	@$(PNPM) install
 
-ACTIONS += format~install ##
-$(ACTION)/format: $(call git_deps,\.((json)|(md)|([jt]sx?))$$)
-	-@$(call prettier,$?,$(ARGS))
-	@$(call done,format)
+.PHONY: build
+build: configure ~deps
+	@$(TSC) -p tsconfig.build.json
 
-ACTIONS += spellcheck~format ##
-$(ACTION)/spellcheck: $(call git_deps,\.(md)$$)
-	-@$(call cspell,$?,$(ARGS))
-	@$(call done,spellcheck)
+.PHONY: test
+test: test/unit test/integration
 
-ACTIONS += lint~spellcheck ##
-$(ACTION)/lint: $(call git_deps,\.([jt]sx?)$$)
-	-@$(call eslint,$?,$(ARGS))
-	@$(call done,lint)
+.PHONY: test/unit
+test/unit: configure ~deps
+	@$(VITEST) run --coverage
 
-ACTIONS += test~lint ##
-$(ACTION)/test: $(call git_deps,\.([jt]sx?)$$)
-	-@$(MKDIR) -p node_modules/.tmp
-	-@$(call jest,$?,$(ARGS))
-	@$(call done,test)
+.PHONY: test/integration
+test/integration: configure ~deps
+	@$(VITEST) run --config vitest.integration.config.mts
 
-ACTIONS += build~test ##
-BUILD_TARGET := lib/index.js
-lib/index.js:
-	@$(call reset,build)
-$(ACTION)/build: $(call git_deps,\.([jt]sx?)$$)
-	@$(BABEL) --env-name esm src -d lib --extensions '.js,.jsx,.ts,.tsx' --source-maps
-	@$(ECHO) '{"type": "module"}' > lib/package.json
-	@$(TSC) -p tsconfig.build.json -d
-	@$(call done,build)
+.PHONY: format
+format: configure ~deps
+	@$(OXFMT)
 
-# .PHONY: start +start
-# start: | ~install +start ##
-# +start:
-# 	@$(NODEMON) --exec $(BABEL_NODE) --extensions .ts src/main.ts $(ARGS)
-
-COLLECT_COVERAGE_FROM := ["src/**/*.{js,jsx,ts,tsx}"]
-.PHONY: coverage +coverage
-coverage: | ~lint +coverage
-+coverage:
-	@$(JEST) --coverage --collectCoverageFrom='$(COLLECT_COVERAGE_FROM)' $(ARGS)
-
-.PHONY: prepare
-prepare: ;
-
-.PHONY: browserslist
-browserslist:
-	@$(BROWSERSLIST_BINARY)
-
-.PHONY: upgrade
-upgrade:
-	@$(YARN) upgrade-interactive
-
-.PHONY: inc
-inc:
-	@$(NPM) version patch --git=false $(NOFAIL)
+.PHONY: lint
+lint: configure ~deps
+	@$(OXFMT) --check
+	@$(OXLINT)
+	@$(TSC) --noEmit
 
 .PHONY: count
-count:
-	@$(CLOC) $(shell $(GIT) ls-files)
+count: configure
+	@$(CLOC) $$($(GIT) ls-files)
 
-.PHONY: publish +publish
-publish: | ~build +publish ##
-+publish:
-	@$(NPM) publish --access=public
+.PHONY: docker docker/%
+docker: FORCE
+	@$(MAKE) -C docker
+docker/%: FORCE
+	@$(MAKE) -C docker $*
 
 .PHONY: clean
-clean: ##
-	-@$(MKCACHE_CLEAN)
-	-@$(JEST) --clearCache $(NOFAIL)
-	-@$(GIT) clean -fXd \
-		$(MKPM_GIT_CLEAN_FLAGS) \
-		$(YARN_GIT_CLEAN_FLAGS) \
-		$(NOFAIL)
+clean:
+	@rm -rf lib coverage coverage-integration *.tsbuildinfo
+	@rm -rf $(MAKEDIR)
 
--include $(call actions)
-
-export CACHE_ENVS += \
-	BABEL \
-	BABEL_NODE \
-	CLOC \
-	CSPELL \
-	ESLINT \
-	JEST \
-	PRETTIER \
-	TSC
-
-endif
+.PHONY: purge
+purge: clean
+	@$(GIT) clean -fxd

@@ -23,7 +23,6 @@
  */
 
 import KeycloakService from '../keycloak.service';
-import httpStatus from 'http-status';
 import type { CanActivate, ExecutionContext } from '@nestjs/common';
 import type { KeycloakRequest, RedirectMeta } from '../types';
 import type { Request, Response } from 'express';
@@ -64,12 +63,19 @@ export class AuthGuard implements CanActivate {
       }
     }
     if (res.clearCookie) res.clearCookie('redirect_from');
-    if (!(await keycloakService.getGrant())) {
+    let grant;
+    try {
+      grant = await keycloakService.getGrant();
+    } catch (err) {
+      // an invalid or expired token is an unauthorized request, not a server error
+      this.logger.verbose(`failed to resolve grant: ${(err as Error).message}`);
+    }
+    if (!grant) {
       throw new HttpException(
         {
           statusCode: HttpStatus.UNAUTHORIZED,
-          message: httpStatus[HttpStatus.UNAUTHORIZED],
-          error: httpStatus[HttpStatus.UNAUTHORIZED],
+          message: 'Unauthorized',
+          error: 'Unauthorized',
         },
         HttpStatus.UNAUTHORIZED,
       );

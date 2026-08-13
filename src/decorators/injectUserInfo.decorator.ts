@@ -23,14 +23,12 @@
  */
 
 import type { ExecutionContext } from '@nestjs/common';
-import { createParamDecorator } from '@risserlabs/typegraphql-nestjs';
+import { createParamDecorator } from '@nestjs/common';
 import { getReq } from '../util';
 
-export function InjectUserInfo() {
-  return createParamDecorator((_data?: unknown, ctx?: ExecutionContext, resolverData?: any) => {
-    const req = getReq(ctx || resolverData?.context);
-    if (!req?.kauth?.keycloak) return;
-    const { keycloak } = req.kauth;
-    return keycloak.getUserInfo();
-  });
-}
+export const InjectUserInfo = createParamDecorator((_data: unknown, context: ExecutionContext) => {
+  const req = getReq(context);
+  if (!req?.kauth?.keycloak) return undefined;
+  const { keycloak } = req.kauth;
+  return keycloak.getUserInfo();
+});

@@ -1,46 +1,22 @@
-# app
-.tern-port
-.yarn/install-state.gz
-.yarn/unplugged
+# build
 /lib
-tsconfig.tsbuildinfo
-yarn.lock
-/null
+*.tsbuildinfo
 
-# nodejs
-*.log
-*.pid
-*.pid.lock
-*.seed
-*.tgz
-.cache
-.env
-.eslintcache
-.grunt
-.lock-wscript
-.next
-.node_repl_history
-.npm
-.nuxt
-.nyc_output
-.serverless
-.vuepress/dist
-.yarn-integrity
-bower_components
-build/Release
-coverage
-jspm_packages/
-lib-cov
-logs
+# deps
 node_modules/
-npm-debug.log*
-pids
-typings/
-yarn-debug.log*
-yarn-error.log*
+.pnpm-store/
 
-# mkpm
-.mkpm/*
-**/.mkpm/*
-!/.mkpm/.cache.tar.gz
-!/.mkpm/.bootstrap.mk
+# test
+coverage/
+coverage-integration/
+
+# env
+.env
+.env.bak
+
+# make
+.make/
+
+# misc
+*.log
+.DS_Store

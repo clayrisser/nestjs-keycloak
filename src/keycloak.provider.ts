@@ -40,11 +40,19 @@ const KeycloakProvider: FactoryProvider<Keycloak> = {
     const keycloak: Keycloak & { accessDenied: any } = new KeycloakConnect({ store: new session.MemoryStore() }, {
       clientId,
       realm,
-      serverUrl: options.baseUrl,
-      credentials: {
-        ...(clientSecret ? { secret: clientSecret } : {}),
-      },
+      // a trailing slash would break the `iss` claim comparison, which is the
+      // only thing pinning a token to the configured realm
+      serverUrl: (options.baseUrl || '').replace(/\/+$/, ''),
+      credentials: clientSecret ? { secret: clientSecret } : {},
+      // when enabled, an access token minted for a different client in the same
+      // realm is rejected instead of being accepted as this client's token
+      'verify-token-audience': options.verifyTokenAudience === true,
     } as unknown as any);
+    if (options.verifyTokenAudience === true) {
+      // keycloak-connect reads the camel case field off the config object it
+      // builds, so set it directly rather than relying on the json key
+      (keycloak.grantManager as any).verifyTokenAudience = true;
+    }
     keycloak.accessDenied = (req: KeycloakRequest<Request>, _res: Response, next: NextFunction) => {
       req.resourceDenied = true;
       next();

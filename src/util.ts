@@ -28,10 +28,9 @@ import type { KeycloakRequest, GraphqlCtx } from './types';
 
 let nestjsGraphql: any;
 try {
-  // eslint-disable-next-line global-require
   nestjsGraphql = require('@nestjs/graphql');
-} catch (err) {
-  // void
+} catch {
+  // @nestjs/graphql is an optional peer dependency
 }
 
 export function getReq(
@@ -85,4 +84,18 @@ export function getRes(resOrExecutionContext: Response | ExecutionContext | Grap
 
 export enum ContextType {
   Graphql = 'graphql',
+}
+
+/**
+ * Joins a controller path and a method path into a single route path.
+ *
+ * A bare `@Controller()` records its path as `/`, so naive concatenation
+ * produces `///auth/callback`, which then never matches the `redirect_uri`
+ * registered with keycloak.
+ */
+export function joinRoutePath(...paths: (string | undefined)[]): string {
+  const segments = paths
+    .flatMap((path) => String(path ?? '').split('/'))
+    .filter((segment: string) => segment.length > 0);
+  return `/${segments.join('/')}`;
 }

@@ -22,12 +22,20 @@
  * limitations under the License.
  */
 
-import KcAdminClient from '@keycloak/keycloak-admin-client';
-import difference from 'lodash.difference';
-import type ClientRepresentation from '@keycloak/keycloak-admin-client/lib/defs/clientRepresentation';
-import type ResourceRepresentation from '@keycloak/keycloak-admin-client/lib/defs/resourceRepresentation';
-import type RoleRepresentation from '@keycloak/keycloak-admin-client/lib/defs/roleRepresentation';
-import type ScopeRepresentation from '@keycloak/keycloak-admin-client/lib/defs/scopeRepresentation';
+import difference from 'lodash/difference';
+import type KcAdminClient from '@keycloak/keycloak-admin-client' with { 'resolution-mode': 'import' };
+import type ClientRepresentation from '@keycloak/keycloak-admin-client/lib/defs/clientRepresentation.js' with {
+  'resolution-mode': 'import',
+};
+import type ResourceRepresentation from '@keycloak/keycloak-admin-client/lib/defs/resourceRepresentation.js' with {
+  'resolution-mode': 'import',
+};
+import type RoleRepresentation from '@keycloak/keycloak-admin-client/lib/defs/roleRepresentation.js' with {
+  'resolution-mode': 'import',
+};
+import type ScopeRepresentation from '@keycloak/keycloak-admin-client/lib/defs/scopeRepresentation.js' with {
+  'resolution-mode': 'import',
+};
 import type { AuthorizationCallback } from './decorators/authorizationCallback.decorator';
 import type { AxiosError } from 'axios';
 import type { HashMap, KeycloakOptions, RegisterOptions } from './types';
@@ -42,6 +50,8 @@ import { Logger, Inject, Injectable } from '@nestjs/common';
 import { PATH_METADATA } from '@nestjs/common/constants';
 import { RESOURCE } from './decorators/resource.decorator';
 import { SCOPES } from './decorators/scopes.decorator';
+import { describeError } from './security';
+import { joinRoutePath } from './util';
 
 const privateGlobalRegistrationMap: GlobalRegistrationMap = {};
 
@@ -64,7 +74,7 @@ export default class KeycloakRegisterService {
 
   private registerOptions: RegisterOptions;
 
-  private keycloakAdmin: KcAdminClient;
+  private keycloakAdmin?: KcAdminClient;
 
   constructor(
     @Inject(KEYCLOAK_OPTIONS) private readonly options: KeycloakOptions,
@@ -72,7 +82,6 @@ export default class KeycloakRegisterService {
     @Inject(Reflector) private readonly reflector: Reflector,
     @Inject(HttpService) private readonly httpService: HttpService,
   ) {
-    this.keycloakAdmin = new KcAdminClient({ baseUrl: options.baseUrl });
     this.registerOptions = {
       roles: [],
       ...(typeof this.options.register === 'boolean' ? {} : this.options.register || {}),
@@ -113,8 +122,8 @@ export default class KeycloakRegisterService {
 
   private get authorizationCallbacks(): AuthorizationCallback[] {
     if (this._authorizationCallbacks) return this._authorizationCallbacks;
-    this._authorizationCallbacks = [
-      ...this.providers.reduce((authorizationCallbacks: AuthorizationCallback[], controller: InstanceWrapper) => {
+    this._authorizationCallbacks = this.providers.reduce(
+      (authorizationCallbacks: AuthorizationCallback[], controller: InstanceWrapper) => {
         const methods = getMethods(controller.instance);
         return [
           ...authorizationCallbacks,
@@ -123,9 +132,8 @@ export default class KeycloakRegisterService {
             if (authorizationCallback) {
               const controllerPath = this.reflector.get(PATH_METADATA, controller.instance.constructor) || '';
               const methodPath = this.reflector.get(PATH_METADATA, method) || '';
-              let callbackEndpoint =
-                authorizationCallback.callbackEndpoint ||
-                `/${controllerPath}${controllerPath && methodPath ? '/' : ''}${methodPath}`;
+              const callbackEndpoint =
+                authorizationCallback.callbackEndpoint || joinRoutePath(controllerPath, methodPath);
               authorizationCallbacks.push({
                 destinationUriFromQuery: true,
                 manual: false,
@@ -137,8 +145,9 @@ export default class KeycloakRegisterService {
             return authorizationCallbacks;
           }, []),
         ];
-      }, []),
-    ];
+      },
+      [],
+    );
     return this._authorizationCallbacks;
   }
 
@@ -152,7 +161,7 @@ export default class KeycloakRegisterService {
       ...this.discoveryService
         .getProviders()
         .reduce((providers: InstanceWrapper<any>[], provider: InstanceWrapper<any>) => {
-          if (typeof provider.name !== 'symbol' && /Resolver$/.test(provider.name)) providers.push(provider);
+          if (typeof provider.name !== 'symbol' && provider.name?.endsWith('Resolver')) providers.push(provider);
           return providers;
         }, []),
       ...this.discoveryService.getControllers(),
@@ -163,35 +172,44 @@ export default class KeycloakRegisterService {
   private get roles() {
     if (this._roles) return this._roles;
     this._roles = [
-      ...this.providers.reduce((roles: Set<string>, controller: InstanceWrapper) => {
-        const methods = getMethods(controller.instance);
-        let values: any[] = [];
-        try {
-          values = this.reflector.getAllAndMerge(AUTHORIZED, [controller.metatype, ...methods]);
-        } catch (err) {
-          this.logger.warn(err);
-          // noop
-        }
-        return new Set([...roles, ...values.flat()]);
-      }, new Set()),
-      ...(this.registerOptions.roles || []),
+      ...this.providers.reduce(
+        (roles: Set<string>, controller: InstanceWrapper) => {
+          const methods = getMethods(controller.instance);
+          let values: any[] = [];
+          try {
+            values = this.reflector.getAllAndMerge(AUTHORIZED, [
+              ...(controller.metatype ? [controller.metatype] : []),
+              ...methods,
+            ]);
+          } catch (err) {
+            // never log the raw error: an axios error carries the request body
+            // of the admin token exchange, and with it the admin password
+            this.logger.warn(`failed to read authorization metadata: ${describeError(err)}`);
+          }
+          return new Set([...roles, ...values.flat()]);
+          // the final set dedupes roles listed both in a decorator and in the
+          // register options, which would otherwise be created twice
+        },
+        new Set(this.registerOptions.roles || []),
+      ),
     ];
     return this._roles;
   }
 
   private get applicationRoles() {
-    return this.roles.filter((role: string) => !/^realm:/g.test(role));
+    return this.roles.filter((role: string) => !role.startsWith('realm:'));
   }
 
   private get realmRoles() {
     return this.roles
-      .filter((role: string) => /^realm:/g.test(role))
+      .filter((role: string) => role.startsWith('realm:'))
       .map((role: string) => role.replace(/^realm:/g, ''));
   }
 
   private get resources(): HashMap<string[]> {
     return Object.entries(
       this.providers.reduce((resources: HashMap<Set<string>>, controller: InstanceWrapper) => {
+        if (!controller.metatype) return resources;
         const methods = getMethods(controller.instance);
         const resourceName = this.reflector.get(RESOURCE, controller.metatype);
         if (!resourceName) return resources;
@@ -228,6 +246,12 @@ export default class KeycloakRegisterService {
   }
 
   private async initializeKeycloakAdmin() {
+    if (!this.keycloakAdmin) {
+      // @keycloak/keycloak-admin-client is esm-only, so it must be loaded with
+      // a dynamic import() to keep this package consumable from commonjs
+      const { default: KeycloakAdminClient } = await import('@keycloak/keycloak-admin-client');
+      this.keycloakAdmin = new KeycloakAdminClient({ baseUrl: this.options.baseUrl });
+    }
     await this.keycloakAdmin.auth({
       clientId: this.options.adminClientId || 'admin-cli',
       grantType: 'password',
@@ -361,7 +385,7 @@ export default class KeycloakRegisterService {
   private async getResources(): Promise<ResourceRepresentation[]> {
     // cannot have property 'name' to list all resource
     // @ts-ignore
-    return this.keycloakAdmin.clients.listResources({
+    return this.keycloakAdmin!.clients.listResources({
       id: await this.getIdFromClientId(this.options.clientId),
     });
   }
@@ -471,7 +495,7 @@ export default class KeycloakRegisterService {
         await new Promise((r) => setTimeout(r, interval));
         return this.waitForReadyWellKnown(interval);
       }
-    } catch (err) {
+    } catch {
       await new Promise((r) => setTimeout(r, interval));
       return this.waitForReadyWellKnown(interval);
     }

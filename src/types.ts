@@ -27,7 +27,9 @@ import type { Grant } from 'keycloak-connect';
 import type { ModuleMetadata } from '@nestjs/common/interfaces';
 import type { Reflector } from '@nestjs/core';
 import type { Request, Response } from 'express';
-import type { RequiredActionAlias } from '@keycloak/keycloak-admin-client/lib/defs/requiredActionProviderRepresentation';
+import type { RequiredActionAlias } from '@keycloak/keycloak-admin-client/lib/defs/requiredActionProviderRepresentation.js' with {
+  'resolution-mode': 'import',
+};
 import type { ResourceAccess } from 'keycloak-connect/middleware/auth-utils/token';
 import { ApiProperty } from '@nestjs/swagger';
 import type KeycloakService from './keycloak.service';
@@ -45,6 +47,15 @@ export interface KeycloakOptions {
   adminClientId?: string;
   adminPassword?: string;
   adminUsername?: string;
+  // extra origins (`https://example.com`) accepted as a post login destination,
+  // on top of the application's own origin
+  allowedRedirectOrigins?: string[];
+  // externally reachable base url of this application, for example
+  // `https://app.example.com`. when unset it is derived from the request, which
+  // means `x-forwarded-*` headers are only honoured behind a trusted proxy
+  appBaseUrl?: string;
+  // time to live of a pending oauth `state` value, in milliseconds
+  authorizationStateTtl?: number;
   baseUrl: string;
   clientId: string;
   clientSecret: string;
@@ -52,7 +63,13 @@ export interface KeycloakOptions {
   ensureFreshness?: boolean;
   realm: string;
   register?: RegisterOptions | boolean;
+  // reject an authorization callback whose `state` does not match the value
+  // bound to the browser that started the login. defaults to true
+  requireAuthorizationState?: boolean;
   strict?: boolean;
+  // require the `aud` claim of an access token to contain this client id.
+  // requires an audience mapper on the keycloak client, so it defaults to false
+  verifyTokenAudience?: boolean;
 }
 
 export interface KeycloakAsyncOptions extends Pick<ModuleMetadata, 'imports'> {
@@ -93,6 +110,8 @@ export type KeycloakRequest<T = Request> = {
     token?: string;
     kauth?: {
       accessToken?: string;
+      authStates?: { value: string; expiresAt: number }[];
+      idToken?: string;
       refreshToken?: string;
       userInfo?: UserInfo;
     };

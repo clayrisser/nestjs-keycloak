@@ -22,12 +22,12 @@
  * limitations under the License.
  */
 
-import type KcAdminClient from '@keycloak/keycloak-admin-client';
+import type KcAdminClient from '@keycloak/keycloak-admin-client' with { 'resolution-mode': 'import' };
 import type { FactoryProvider } from '@nestjs/common';
 import { Scope } from '@nestjs/common';
 import { CREATE_KEYCLOAK_ADMIN } from './createKeycloakAdmin.provider';
 
-export const KEYCLOAK_ADMIN = 'CREATE_KEYCLOAK';
+export const KEYCLOAK_ADMIN = 'KEYCLOAK_ADMIN';
 
 export const KeycloakAdminProvider: FactoryProvider<KcAdminClient | void> = {
   provide: KEYCLOAK_ADMIN,

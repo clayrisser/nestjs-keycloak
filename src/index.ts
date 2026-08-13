@@ -25,7 +25,7 @@
 import { DiscoveryModule, APP_GUARD } from '@nestjs/core';
 import { HttpModule } from '@nestjs/axios';
 import type { DynamicModule, MiddlewareConsumer, NestModule, OnModuleInit } from '@nestjs/common';
-import { Global, Logger, Module, RequestMethod } from '@nestjs/common';
+import { Global, Module, RequestMethod } from '@nestjs/common';
 import CreateKeycloakAdminProvider from './createKeycloakAdmin.provider';
 import KeycloakMiddleware from './keycloak.middleware';
 import KeycloakProvider from './keycloak.provider';
@@ -39,8 +39,6 @@ import { KeycloakAdminProvider } from './keycloakAdmin.provider';
 @Global()
 @Module({})
 export default class KeycloakModule implements OnModuleInit, NestModule {
-  private readonly logger = new Logger(KeycloakModule.name);
-
   private static imports = [HttpModule, DiscoveryModule];
 
   constructor(private readonly keycloakRegisterService: KeycloakRegisterService) {}
@@ -128,12 +126,14 @@ export default class KeycloakModule implements OnModuleInit, NestModule {
   }
 
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(KeycloakMiddleware).forRoutes({ path: '*', method: RequestMethod.ALL });
+    // express v5 (path-to-regexp v8) wildcard syntax
+    consumer.apply(KeycloakMiddleware).forRoutes({ path: '{*splat}', method: RequestMethod.ALL });
   }
 }
 
 export { CreateKeycloakAdminProvider, KeycloakMiddleware, KeycloakProvider, KeycloakRegisterService, KeycloakService };
 
+export * from './authState';
 export * from './createKeycloakAdmin.provider';
 export * from './decorators';
 export * from './guards';
@@ -141,3 +141,6 @@ export * from './keycloak.provider';
 export * from './keycloak.service';
 export * from './keycloakAdmin.provider';
 export * from './types';
+// getBaseUrl is re-exported from ./decorators for backwards compatibility, so
+// it is deliberately not part of this star export
+export { describeError, isSafeRedirect, redactSecrets, sanitizeError, trustsProxy } from './security';
