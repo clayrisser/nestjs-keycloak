@@ -50,6 +50,8 @@ import { Logger, Inject, Injectable } from '@nestjs/common';
 import { PATH_METADATA } from '@nestjs/common/constants';
 import { RESOURCE } from './decorators/resource.decorator';
 import { SCOPES } from './decorators/scopes.decorator';
+import { describeError } from './security';
+import { joinRoutePath } from './util';
 
 const privateGlobalRegistrationMap: GlobalRegistrationMap = {};
 
@@ -130,9 +132,8 @@ export default class KeycloakRegisterService {
             if (authorizationCallback) {
               const controllerPath = this.reflector.get(PATH_METADATA, controller.instance.constructor) || '';
               const methodPath = this.reflector.get(PATH_METADATA, method) || '';
-              let callbackEndpoint =
-                authorizationCallback.callbackEndpoint ||
-                `/${controllerPath}${controllerPath && methodPath ? '/' : ''}${methodPath}`;
+              const callbackEndpoint =
+                authorizationCallback.callbackEndpoint || joinRoutePath(controllerPath, methodPath);
               authorizationCallbacks.push({
                 destinationUriFromQuery: true,
                 manual: false,
@@ -181,8 +182,9 @@ export default class KeycloakRegisterService {
               ...methods,
             ]);
           } catch (err) {
-            this.logger.warn(err);
-            // noop
+            // never log the raw error: an axios error carries the request body
+            // of the admin token exchange, and with it the admin password
+            this.logger.warn(`failed to read authorization metadata: ${describeError(err)}`);
           }
           return new Set([...roles, ...values.flat()]);
           // the final set dedupes roles listed both in a decorator and in the

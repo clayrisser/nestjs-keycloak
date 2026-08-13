@@ -204,6 +204,20 @@ describe('isAuthorizedByRoles', () => {
     expect(await createServiceWithGrant().isAuthorizedByRoles(['three', ['one', 'two']])).toBe(true);
     expect(await createServiceWithGrant().isAuthorizedByRoles(['three', ['one', 'four']])).toBe(false);
   });
+
+  it('denies when there is no access token at all', async () => {
+    expect(await createService().service.isAuthorizedByRoles(['one'])).toBe(false);
+  });
+
+  it('does not treat a non array argument as an empty role list', async () => {
+    // reading `.length` off a bare string used to short circuit into an allow
+    expect(await createServiceWithGrant().isAuthorizedByRoles('three' as any)).toBe(false);
+    expect(await createServiceWithGrant().isAuthorizedByRoles('one' as any)).toBe(true);
+  });
+
+  it('does not treat an empty intersection as satisfied', async () => {
+    expect(await createServiceWithGrant().isAuthorizedByRoles([[]])).toBe(false);
+  });
 });
 
 describe('getUserInfo', () => {
@@ -258,18 +272,91 @@ describe('directGrant', () => {
 });
 
 describe('logout', () => {
-  it('clears the session and returns the logout redirect', async () => {
+  function createLogoutService(kauth: Record<string, any> = { accessToken: 'token', refreshToken: 'refresh' }) {
     const destroy = vi.fn((callback: (err?: Error) => void) => callback());
-    const logoutUrl = vi.fn(() => 'http://keycloak.example.com/logout');
-    const { service, req } = createService({
-      req: { session: { kauth: { accessToken: 'token' }, token: 'token', destroy } },
-      keycloak: { logoutUrl },
-    });
-    expect(await service.logout('http://app.example.com')).toEqual({
-      redirect: 'http://keycloak.example.com/logout',
-    });
+    const post = vi.fn(async () => ({ data: {} }));
+    return {
+      post,
+      destroy,
+      ...createService({
+        req: { session: { kauth, token: 'token', destroy } },
+        httpService: { axiosRef: { post } },
+      }),
+    };
+  }
+
+  it('clears the session', async () => {
+    const { service, req, destroy } = createLogoutService();
+    await service.logout('http://app.example.com');
     expect(destroy).toHaveBeenCalled();
     expect((req as any).session.kauth).toBeUndefined();
-    expect(logoutUrl).toHaveBeenCalledWith('http://app.example.com');
+  });
+
+  it('revokes the refresh token at keycloak over the back channel', async () => {
+    const { service, post } = createLogoutService();
+    await service.logout('http://app.example.com');
+    const [url, body] = post.mock.calls[0] as any;
+    expect(url).toBe('http://keycloak.example.com/realms/test/protocol/openid-connect/logout');
+    const params = new URLSearchParams(body);
+    expect(params.get('refresh_token')).toBe('refresh');
+    expect(params.get('client_id')).toBe(clientId);
+    expect(params.get('client_secret')).toBe('test-secret');
+  });
+
+  it('still tears down the local session when revocation fails', async () => {
+    const post = vi.fn(async () => {
+      throw Object.assign(new Error('Request failed with status code 400'), {
+        config: { method: 'post', url: 'http://keycloak.example.com/logout', data: 'client_secret=test-secret' },
+        response: { status: 400 },
+      });
+    });
+    const destroy = vi.fn((callback: (err?: Error) => void) => callback());
+    const { service, req } = createService({
+      req: { session: { kauth: { refreshToken: 'refresh' }, destroy } },
+      httpService: { axiosRef: { post } },
+    });
+    await expect(service.logout('http://app.example.com')).resolves.toMatchObject({ redirect: expect.any(String) });
+    expect((req as any).session.kauth).toBeUndefined();
+  });
+
+  it('keeps the post logout redirect that keycloak-connect would have dropped', async () => {
+    const { service } = createLogoutService();
+    const { redirect } = await service.logout('http://app.example.com/bye');
+    const url = new URL(redirect!);
+    expect(url.pathname).toBe('/realms/test/protocol/openid-connect/logout');
+    expect(url.searchParams.get('post_logout_redirect_uri')).toBe('http://app.example.com/bye');
+    expect(url.searchParams.get('client_id')).toBe(clientId);
+  });
+
+  it('prefers an id token hint when one was stored', async () => {
+    const { service } = createLogoutService({ refreshToken: 'refresh', idToken: 'id-token' });
+    const { redirect } = await service.logout('http://app.example.com/bye');
+    const url = new URL(redirect!);
+    expect(url.searchParams.get('id_token_hint')).toBe('id-token');
+    expect(url.searchParams.get('post_logout_redirect_uri')).toBe('http://app.example.com/bye');
+  });
+});
+
+describe('credential hygiene', () => {
+  it('does not let the token request body escape through a failed grant', async () => {
+    const post = vi.fn(async () => {
+      throw Object.assign(new Error('Request failed with status code 401'), {
+        config: {
+          method: 'post',
+          url: 'http://keycloak.example.com/realms/test/protocol/openid-connect/token',
+          data: 'client_id=test-client&username=alice&password=hunter2&grant_type=password',
+          headers: { Authorization: 'Basic dGVzdDpodW50ZXIy' },
+        },
+        response: { status: 401, data: { error: 'invalid_grant' } },
+      });
+    });
+    const { service } = createService({ httpService: { axiosRef: { post } } });
+    const err = await service.directGrant({ username: 'alice', password: 'hunter2', clientId }).catch((e) => e);
+    expect(err).toBeInstanceOf(Error);
+    expect((err as any).config).toBeUndefined();
+    expect((err as any).response).toBeUndefined();
+    const serialized = `${err.message}${err.stack}${JSON.stringify(err)}`;
+    expect(serialized).not.toContain('hunter2');
+    expect(err.message).toContain('401');
   });
 });

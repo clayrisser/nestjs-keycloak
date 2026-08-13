@@ -38,6 +38,9 @@ import { REQUEST } from '@nestjs/core';
 import { CREATE_KEYCLOAK_ADMIN } from './createKeycloakAdmin.provider';
 import { KEYCLOAK } from './keycloak.provider';
 import { getReq } from './util';
+import { describeError, sanitizeError } from './security';
+import { DEFAULT_AUTH_STATE_TTL } from './authState';
+import type { AuthStateOptions } from './authState';
 import type {
   AuthorizationCodeGrantOptions,
   ClientCredentialsGrantOptions,
@@ -87,6 +90,26 @@ export default class KeycloakService {
 
   get clientId(): string {
     return (this.keycloak.grantManager as any).clientId;
+  }
+
+  get appBaseUrl(): string | undefined {
+    return this.options.appBaseUrl;
+  }
+
+  get allowedRedirectOrigins(): string[] {
+    return this.options.allowedRedirectOrigins || [];
+  }
+
+  get requireAuthorizationState(): boolean {
+    return this.options.requireAuthorizationState !== false;
+  }
+
+  get authStateOptions(): AuthStateOptions {
+    return {
+      secret: this.options.clientSecret,
+      ttl: this.options.authorizationStateTtl ?? DEFAULT_AUTH_STATE_TTL,
+      secure: (this.options.appBaseUrl || '').startsWith('https:') || this.req?.protocol === 'https',
+    };
   }
 
   get bearerToken(): Token | undefined {
@@ -241,13 +264,16 @@ export default class KeycloakService {
 
   async isAuthorizedByRoles(roles: (string | string[])[] = []): Promise<boolean> {
     const accessToken = await this.getAccessToken();
+    // normalize before the length check, otherwise a non array argument reads
+    // `length` as undefined and short circuits into an unconditional allow
     const rolesArr = Array.isArray(roles) ? roles : [roles];
-    if (!roles.length) return true;
+    if (!rolesArr.length) return true;
+    if (!accessToken) return false;
     return rolesArr.some((role: string | string[]) => {
-      const result = Array.isArray(role)
-        ? role.every((innerRole: string) => accessToken?.hasRole(innerRole))
-        : accessToken?.hasRole(role);
-      return result;
+      if (Array.isArray(role)) {
+        return role.length > 0 && role.every((innerRole: string) => accessToken.hasRole(innerRole));
+      }
+      return typeof role === 'string' && accessToken.hasRole(role);
     });
   }
 
@@ -268,8 +294,8 @@ export default class KeycloakService {
       );
     } catch (err) {
       const error = err as AxiosError;
-      if (error.response?.status !== 404) throw err;
-      this.logger.error(err);
+      if (error.response?.status !== 404) throw sanitizeError(err);
+      this.logger.debug(`service account client lookup returned 404: ${describeError(err)}`);
       return;
     }
   }
@@ -284,7 +310,7 @@ export default class KeycloakService {
       return (await keycloakAdmin.users.findOne({ id: userId })) || undefined;
     } catch (err) {
       const error = err as AxiosError;
-      if (error.response?.status !== 404) throw err;
+      if (error.response?.status !== 404) throw sanitizeError(err);
       return;
     }
   }
@@ -340,20 +366,13 @@ export default class KeycloakService {
   ): Promise<Grant | undefined> {
     let grant: Grant | undefined;
     if (clientId) {
-      const res = await this.httpService.axiosRef.post(
-        `${this.options.baseUrl}/realms/${this.options.realm}/protocol/openid-connect/token`,
-        qs.stringify({
-          client_id: clientId,
-          username,
-          password,
-          grant_type: 'password',
-          scope: this.serializeScope(scope),
-        }),
-        {
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        },
-      );
-      grant = await this.keycloak.grantManager.createGrant(res.data);
+      grant = await this.tokenGrant({
+        client_id: clientId,
+        username,
+        password,
+        grant_type: 'password',
+        scope: this.serializeScope(scope),
+      });
     } else {
       grant = await this.keycloak.grantManager.obtainDirectly(
         username,
@@ -364,7 +383,8 @@ export default class KeycloakService {
       );
     }
     if (!grant) return;
-    if (persistSession) this.sessionSetTokens(grant.access_token as Token, grant.refresh_token as Token);
+    if (persistSession)
+      this.sessionSetTokens(grant.access_token as Token, grant.refresh_token as Token, grant.id_token as Token);
     await this.afterGrant(grant);
     return grant;
   }
@@ -376,19 +396,12 @@ export default class KeycloakService {
     if (!clientSecret) clientSecret = this.options.clientSecret;
     let grant: Grant | undefined;
     if (clientId) {
-      const res = await this.httpService.axiosRef.post(
-        `${this.options.baseUrl}/realms/${this.options.realm}/protocol/openid-connect/token`,
-        qs.stringify({
-          ...(clientSecret ? { client_secret: clientSecret } : {}),
-          client_id: clientId,
-          grant_type: 'client_credentials',
-          scope: this.serializeScope(scope),
-        }),
-        {
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        },
-      );
-      grant = await this.keycloak.grantManager.createGrant(res.data);
+      grant = await this.tokenGrant({
+        ...(clientSecret ? { client_secret: clientSecret } : {}),
+        client_id: clientId,
+        grant_type: 'client_credentials',
+        scope: this.serializeScope(scope),
+      });
     } else {
       grant = await this.keycloak.grantManager.obtainFromClientCredentials(
         // @ts-ignore missing scope argument
@@ -397,7 +410,8 @@ export default class KeycloakService {
       );
     }
     if (!grant) return;
-    if (persistSession) this.sessionSetTokens(grant.access_token as Token, grant.refresh_token as Token);
+    if (persistSession)
+      this.sessionSetTokens(grant.access_token as Token, grant.refresh_token as Token, grant.id_token as Token);
     await this.afterGrant(grant);
     return grant;
   }
@@ -407,20 +421,14 @@ export default class KeycloakService {
     persistSession = true,
   ): Promise<Grant | undefined> {
     if (!clientId) clientId = this.clientId;
-    const res = await this.httpService.axiosRef.post(
-      `${this.options.baseUrl}/realms/${this.options.realm}/protocol/openid-connect/token`,
-      qs.stringify({
-        client_id: clientId,
-        grant_type: 'refresh_token',
-        refresh_token: refreshToken,
-      }),
-      {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      },
-    );
-    const grant = await this.keycloak.grantManager.createGrant(res.data);
+    const grant = await this.tokenGrant({
+      client_id: clientId,
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+    });
     if (!grant) return;
-    if (persistSession) this.sessionSetTokens(grant.access_token as Token, grant.refresh_token as Token);
+    if (persistSession)
+      this.sessionSetTokens(grant.access_token as Token, grant.refresh_token as Token, grant.id_token as Token);
     await this.afterGrant(grant);
     return grant;
   }
@@ -433,22 +441,16 @@ export default class KeycloakService {
     if (clientId || redirectUri || codeVerifier) {
       if (!clientId) clientId = this.clientId;
       if (!redirectUri) redirectUri = this.req.session ? this.req.session.auth_redirect_uri : undefined;
-      const res = await this.httpService.axiosRef.post(
-        `${this.options.baseUrl}/realms/${this.options.realm}/protocol/openid-connect/token`,
-        qs.stringify({
-          ...(sessionId ? { client_session_state: sessionId } : {}),
-          ...(sessionHost ? { client_session_host: sessionHost } : {}),
-          ...(codeVerifier ? { code_verifier: codeVerifier } : {}),
-          code,
-          grant_type: 'authorization_code',
-          client_id: clientId,
-          redirect_uri: redirectUri,
-        }),
-        {
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        },
-      );
-      grant = await this.keycloak.grantManager.createGrant(res.data);
+      grant = await this.tokenGrant({
+        ...(sessionId ? { client_session_state: sessionId } : {}),
+        ...(sessionHost ? { client_session_host: sessionHost } : {}),
+        ...(codeVerifier ? { code_verifier: codeVerifier } : {}),
+        ...(this.options.clientSecret ? { client_secret: this.options.clientSecret } : {}),
+        code,
+        grant_type: 'authorization_code',
+        client_id: clientId,
+        redirect_uri: redirectUri,
+      });
     } else {
       grant = await this.keycloak.grantManager.obtainFromCode(
         // @ts-ignore first argument is req
@@ -459,7 +461,8 @@ export default class KeycloakService {
       );
     }
     if (!grant) return undefined;
-    if (persistSession) this.sessionSetTokens(grant.access_token as Token, grant.refresh_token as Token);
+    if (persistSession)
+      this.sessionSetTokens(grant.access_token as Token, grant.refresh_token as Token, grant.id_token as Token);
     await this.afterGrant(grant);
     return grant;
   }
@@ -478,10 +481,99 @@ export default class KeycloakService {
     });
   }
 
-  async logout(redirectUri: string): Promise<LogoutResult> {
+  /**
+   * Ends the session locally and at keycloak.
+   *
+   * The refresh token is revoked over the back channel first, so that a caller
+   * which never follows the returned redirect (an api client, a fetch based
+   * front end) cannot keep minting access tokens from the old session.
+   */
+  async logout(redirectUri?: string): Promise<LogoutResult> {
+    const refreshToken = this.req.session?.kauth?.refreshToken || (this._grant?.refresh_token as Token)?.token;
+    const idToken = this.req.session?.kauth?.idToken || (this._grant?.id_token as Token)?.token;
+    await this.revokeSession(refreshToken);
     this.clearGrant();
     await this.clearSession();
-    return { redirect: this.keycloak.logoutUrl(redirectUri) };
+    return { redirect: this.buildLogoutUrl(redirectUri, idToken) };
+  }
+
+  /**
+   * Ends the keycloak side session without waiting for a front channel
+   * redirect. Failures are logged and swallowed, because the local session has
+   * to be torn down either way.
+   */
+  private async revokeSession(refreshToken?: string) {
+    if (!refreshToken) return;
+    try {
+      await this.httpService.axiosRef.post(
+        `${this.realmUrl}/protocol/openid-connect/logout`,
+        qs.stringify({
+          client_id: this.clientId,
+          ...(this.options.clientSecret ? { client_secret: this.options.clientSecret } : {}),
+          refresh_token: refreshToken,
+        }),
+        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
+      );
+    } catch (err) {
+      this.logger.warn(`failed to revoke the keycloak session: ${describeError(err)}`);
+    }
+  }
+
+  /**
+   * keycloak-connect's `logoutUrl` silently drops the redirect unless an
+   * `id_token_hint` is supplied, so the url is built here instead. keycloak
+   * validates `post_logout_redirect_uri` against the client's registered uris.
+   */
+  private buildLogoutUrl(redirectUri?: string, idToken?: string): string {
+    const url = new URL(`${this.realmUrl}/protocol/openid-connect/logout`);
+    if (redirectUri) {
+      url.searchParams.set('post_logout_redirect_uri', redirectUri);
+      if (idToken) {
+        url.searchParams.set('id_token_hint', idToken);
+      } else {
+        url.searchParams.set('client_id', this.clientId);
+      }
+    }
+    return url.toString();
+  }
+
+  private get realmUrl(): string {
+    return `${(this.options.baseUrl || '').replace(/\/+$/, '')}/realms/${this.options.realm}`;
+  }
+
+  /**
+   * Exchanges credentials at the token endpoint and builds a validated grant.
+   */
+  private async tokenGrant(params: Record<string, string | undefined>): Promise<Grant | undefined> {
+    const data = await this.postToken(params);
+    // keycloak-connect types the raw token response as if it already held Token
+    // objects, when the wire format is plain strings
+    return this.keycloak.grantManager.createGrant(data as any);
+  }
+
+  private async postToken(params: Record<string, string | undefined>): Promise<TokenResponseData> {
+    const body = Object.entries(params).reduce((body: Record<string, string>, [key, value]) => {
+      if (typeof value !== 'undefined') body[key] = value;
+      return body;
+    }, {});
+    try {
+      const res = await this.httpService.axiosRef.post(
+        `${this.realmUrl}/protocol/openid-connect/token`,
+        qs.stringify(body),
+        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
+      );
+      return res.data;
+    } catch (err) {
+      // an axios error carries the request config, and therefore the form body
+      // holding the client secret, the user's password, the refresh token or
+      // the authorization code. never let that object escape this method
+      throw sanitizeError(
+        err,
+        `keycloak ${body.grant_type || 'token'} request failed${
+          (err as AxiosError)?.response?.status ? ` with status ${(err as AxiosError).response!.status}` : ''
+        }`,
+      );
+    }
   }
 
   private async afterGrant(grant?: Grant) {
@@ -530,11 +622,15 @@ export default class KeycloakService {
     return;
   }
 
-  private sessionSetTokens(accessToken?: Token, refreshToken?: Token) {
+  private sessionSetTokens(accessToken?: Token, refreshToken?: Token, idToken?: Token) {
     if (this.req.session) {
       if (!this.req.session.kauth) this.req.session.kauth = {};
       if (refreshToken) {
         this.req.session.kauth.refreshToken = refreshToken.token;
+      }
+      if (idToken) {
+        // kept only so that logout can send an `id_token_hint`
+        this.req.session.kauth.idToken = idToken.token;
       }
       if (accessToken) {
         this.req.session.kauth.accessToken = accessToken.token;

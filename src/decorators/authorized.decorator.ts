@@ -22,14 +22,14 @@
  * limitations under the License.
  */
 
-import { randomBytes } from 'crypto';
 import { RENDER_METADATA } from '@nestjs/common/constants';
 import type { Request, Response } from 'express';
 import type { ArgumentsHost, ExceptionFilter } from '@nestjs/common';
-import { Catch, HttpException, Inject, SetMetadata, UseFilters, applyDecorators } from '@nestjs/common';
+import { Catch, HttpException, Inject, Logger, SetMetadata, UseFilters, applyDecorators } from '@nestjs/common';
 import type { KeycloakRequest, KeycloakOptions } from '../types';
 import { KEYCLOAK_OPTIONS } from '../types';
-import { getBaseUrl } from './authorizationCallback.decorator';
+import { createAuthState, DEFAULT_AUTH_STATE_TTL } from '../authState';
+import { describeError, getBaseUrl, isSafeRedirect } from '../security';
 import { getGlobalRegistrationMap } from '../keycloakRegister.service';
 
 export const AUTHORIZED = 'KEYCLOAK_AUTHORIZED';
@@ -40,6 +40,8 @@ export const Authorized = (...roles: (string | string[])[]) => {
 
 @Catch(HttpException)
 export class UnauthorizedFilter implements ExceptionFilter {
+  private readonly logger = new Logger(UnauthorizedFilter.name);
+
   constructor(@Inject(KEYCLOAK_OPTIONS) private options: KeycloakOptions) {}
 
   catch(exception: HttpException, host: ArgumentsHost) {
@@ -50,16 +52,37 @@ export class UnauthorizedFilter implements ExceptionFilter {
     }
     const authorizationCallback = getGlobalRegistrationMap().defaultAuthorizationCallback;
     if (authorizationCallback && req.redirectUnauthorized !== false && req.annotationKeys?.has(RENDER_METADATA)) {
-      const baseUrl = getBaseUrl(req);
+      const baseUrl = getBaseUrl(req, this.options.appBaseUrl);
       let { callbackEndpoint } = authorizationCallback;
       callbackEndpoint = callbackEndpoint?.[0] === '/' ? `${baseUrl}${callbackEndpoint}` : callbackEndpoint;
-      return res.status(301).redirect(
-        `${this.options.baseUrl}/realms/${this.options.realm}/protocol/openid-connect/auth?${new URLSearchParams({
+      const destinationUri = `${baseUrl}${req.originalUrl}`;
+      if (!isSafeRedirect(destinationUri, baseUrl, this.options.allowedRedirectOrigins)) {
+        return res.status(exception?.getStatus()).json(exception.getResponse());
+      }
+      let state: string;
+      try {
+        // the state is bound to this browser here and verified at the callback,
+        // which is what makes the login flow resistant to csrf
+        state = createAuthState(req, res, {
+          secret: this.options.clientSecret,
+          ttl: this.options.authorizationStateTtl ?? DEFAULT_AUTH_STATE_TTL,
+          secure: baseUrl.startsWith('https:'),
+        });
+      } catch (err) {
+        this.logger.error(`cannot start a login redirect: ${describeError(err)}`);
+        return res.status(exception?.getStatus()).json(exception.getResponse());
+      }
+      // 302, never 301: the login redirect carries a single use state value and
+      // must not be cached by the browser
+      return res.status(302).redirect(
+        `${(this.options.baseUrl || '').replace(/\/+$/, '')}/realms/${
+          this.options.realm
+        }/protocol/openid-connect/auth?${new URLSearchParams({
           client_id: this.options.clientId,
-          redirect_uri: `${callbackEndpoint}?destination_uri=${encodeURIComponent(`${baseUrl}${req.originalUrl}`)}`,
+          redirect_uri: `${callbackEndpoint}?destination_uri=${encodeURIComponent(destinationUri)}`,
           response_type: 'code',
           scope: 'openid',
-          state: randomBytes(8).toString('hex'),
+          state,
         }).toString()}`,
       );
     }

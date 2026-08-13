@@ -2,26 +2,57 @@ image: node:24
 
 stages:
   - verify
+  - integration
 
-verify:
-  stage: verify
+.node:
   variables:
     npm_config_store_dir: .pnpm-store
   before_script:
     - npm install -g pnpm@10.32.1
     - pnpm install --frozen-lockfile
-  script:
-    - pnpm lint
-    - pnpm build
-    - pnpm test
-  coverage: '/Lines\s*:\s*(\d+\.?\d*)%/'
   cache:
     key:
       files:
         - pnpm-lock.yaml
     paths:
       - .pnpm-store
+
+verify:
+  extends: .node
+  stage: verify
+  script:
+    - pnpm lint
+    - pnpm build
+    - pnpm test
+  coverage: '/Lines\s*:\s*(\d+\.?\d*)%/'
   artifacts:
     when: always
     paths:
       - coverage/
+
+# the integration suite needs a real keycloak. it is wired in as a ci service
+# container rather than docker-in-docker, so it runs on an ordinary docker
+# executor without privileged mode. KEYCLOAK_URL tells the suite that keycloak
+# is already running, so it skips the local docker compose path.
+integration:
+  extends: .node
+  stage: integration
+  services:
+    - name: quay.io/keycloak/keycloak:26.6.1
+      alias: keycloak
+      command: ['start-dev']
+      variables:
+        KC_BOOTSTRAP_ADMIN_USERNAME: admin
+        KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+        KC_HEALTH_ENABLED: 'true'
+  variables:
+    npm_config_store_dir: .pnpm-store
+    KEYCLOAK_URL: http://keycloak:8080
+    KEYCLOAK_ADMIN_USERNAME: admin
+    KEYCLOAK_ADMIN_PASSWORD: admin
+  script:
+    - pnpm test:integration
+  artifacts:
+    when: always
+    paths:
+      - coverage-integration/

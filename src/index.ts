@@ -133,6 +133,7 @@ export default class KeycloakModule implements OnModuleInit, NestModule {
 
 export { CreateKeycloakAdminProvider, KeycloakMiddleware, KeycloakProvider, KeycloakRegisterService, KeycloakService };
 
+export * from './authState';
 export * from './createKeycloakAdmin.provider';
 export * from './decorators';
 export * from './guards';
@@ -140,3 +141,6 @@ export * from './keycloak.provider';
 export * from './keycloak.service';
 export * from './keycloakAdmin.provider';
 export * from './types';
+// getBaseUrl is re-exported from ./decorators for backwards compatibility, so
+// it is deliberately not part of this star export
+export { describeError, isSafeRedirect, redactSecrets, sanitizeError, trustsProxy } from './security';

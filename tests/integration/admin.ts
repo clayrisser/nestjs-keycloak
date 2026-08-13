@@ -38,14 +38,25 @@ export async function adminGet<T>(token: string, path: string): Promise<T> {
   return (await res.json()) as T;
 }
 
-export async function passwordGrant(username: string, password: string): Promise<string> {
+export interface TokenSet {
+  access_token: string;
+  refresh_token: string;
+  id_token?: string;
+}
+
+export async function passwordGrantTokens(
+  username: string,
+  password: string,
+  client = clientId,
+  secret = clientSecret,
+): Promise<TokenSet> {
   const res = await fetch(`${baseUrl}/realms/${realm}/protocol/openid-connect/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       grant_type: 'password',
-      client_id: clientId,
-      client_secret: clientSecret,
+      client_id: client,
+      client_secret: secret,
       scope: 'openid profile email',
       username,
       password,
@@ -54,5 +65,22 @@ export async function passwordGrant(username: string, password: string): Promise
   if (!res.ok) {
     throw new Error(`password grant for ${username} failed: ${res.status} ${await res.text()}`);
   }
-  return ((await res.json()) as { access_token: string }).access_token;
+  return (await res.json()) as TokenSet;
+}
+
+export async function passwordGrant(username: string, password: string): Promise<string> {
+  return (await passwordGrantTokens(username, password)).access_token;
+}
+
+export async function refreshGrant(refreshToken: string, client = clientId, secret = clientSecret): Promise<Response> {
+  return fetch(`${baseUrl}/realms/${realm}/protocol/openid-connect/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      client_id: client,
+      client_secret: secret,
+      refresh_token: refreshToken,
+    }),
+  });
 }

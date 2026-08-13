@@ -60,13 +60,26 @@ export class ResourceGuard implements CanActivate {
     if (!resource) return true;
     const scopes = this.getScopes(context);
     if (!scopes.length) return true;
-    const username = await keycloakService.getUsername();
+    let username: string | undefined;
+    try {
+      username = await keycloakService.getUsername();
+    } catch (err) {
+      // an invalid or expired token must deny the request rather than escape as
+      // a 500, which would also leak internals through the error response
+      this.logger.verbose(`failed to resolve the user for resource '${resource}': ${(err as Error).message}`);
+      return false;
+    }
     if (!username) return false;
     this.logger.verbose(`protecting resource '${resource}' with scopes [ ${scopes.join(', ')} ]`);
     const permissions = scopes.map((scope) => `${resource}:${scope}`);
-    if (await keycloakService.enforce(permissions)) {
-      this.logger.verbose(`resource '${resource}' granted to '${username}'`);
-      return true;
+    try {
+      if (await keycloakService.enforce(permissions)) {
+        this.logger.verbose(`resource '${resource}' granted to '${username}'`);
+        return true;
+      }
+    } catch (err) {
+      this.logger.verbose(`failed to enforce resource '${resource}': ${(err as Error).message}`);
+      return false;
     }
     this.logger.verbose(`resource '${resource}' denied to '${username}'`);
     return false;

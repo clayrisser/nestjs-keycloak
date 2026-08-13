@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import type { TestProject } from 'vitest/node' with { 'resolution-mode': 'import' };
 import { adminGet, adminRequest, getAdminToken } from './admin';
-import { clientId, clientSecret, realm, users } from './config';
+import { clientId, clientSecret, externalKeycloak, otherClientId, otherClientSecret, realm, users } from './config';
 
 function compose(rootDir: string, ...args: string[]) {
   execFileSync('docker', ['compose', '-f', 'docker/compose.yaml', ...args], {
@@ -36,6 +36,16 @@ async function provision() {
     redirectUris: ['*'],
     webOrigins: ['*'],
   });
+  await adminRequest(token, 'POST', `/realms/${realm}/clients`, {
+    clientId: otherClientId,
+    secret: otherClientSecret,
+    enabled: true,
+    publicClient: false,
+    directAccessGrantsEnabled: true,
+    standardFlowEnabled: true,
+    redirectUris: ['*'],
+    webOrigins: ['*'],
+  });
   await adminRequest(token, 'POST', `/realms/${realm}/roles`, { name: 'special' });
   await Promise.all(
     Object.values(users).map((user) =>
@@ -57,6 +67,11 @@ async function provision() {
 
 export default async function globalSetup(project: TestProject) {
   const rootDir = project.config.root;
+  // ci supplies keycloak as a service container, so there is nothing to start
+  if (externalKeycloak) {
+    await provision();
+    return async () => {};
+  }
   compose(rootDir, 'up', '-d', '--wait', '--wait-timeout', '300', 'keycloak');
   await provision();
   return async () => {

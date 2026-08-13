@@ -8,9 +8,11 @@ import { clientId, makeContext, makeToken } from './helpers';
 
 interface CreateGuardOptions {
   deny?: boolean;
+  enforcerThrows?: boolean;
+  validateGrant?: (grant: any) => Promise<any>;
 }
 
-function createGuard({ deny = false }: CreateGuardOptions = {}) {
+function createGuard({ deny = false, enforcerThrows = false, validateGrant }: CreateGuardOptions = {}) {
   const options: KeycloakOptions = {
     baseUrl: 'http://keycloak.example.com',
     clientId,
@@ -18,6 +20,7 @@ function createGuard({ deny = false }: CreateGuardOptions = {}) {
     realm: 'test',
   };
   const enforce = vi.fn((_permissions: string[]) => (req: any, _res: any, next: () => void) => {
+    if (enforcerThrows) throw new Error('enforcer exploded');
     req.resourceDenied = deny;
     next();
   });
@@ -25,7 +28,7 @@ function createGuard({ deny = false }: CreateGuardOptions = {}) {
     grantManager: {
       clientId,
       isGrantRefreshable: () => false,
-      validateGrant: vi.fn(async (grant: any) => grant),
+      validateGrant: validateGrant ? vi.fn(validateGrant) : vi.fn(async (grant: any) => grant),
     },
     enforcer: enforce,
   };
@@ -75,5 +78,21 @@ describe('ResourceGuard', () => {
     });
     expect(await guard.canActivate(context)).toBe(false);
     expect(enforce).not.toHaveBeenCalled();
+  });
+
+  it('denies rather than throwing when the token cannot be validated', async () => {
+    const { guard, enforce } = createGuard({
+      validateGrant: vi.fn(async () => {
+        throw new Error('invalid token (signature)');
+      }),
+    });
+    const context = createResourceContext({ scopes: ['read'] });
+    await expect(guard.canActivate(context)).resolves.toBe(false);
+    expect(enforce).not.toHaveBeenCalled();
+  });
+
+  it('denies rather than throwing when the enforcer blows up', async () => {
+    const { guard } = createGuard({ enforcerThrows: true });
+    await expect(guard.canActivate(createResourceContext({ scopes: ['read'] }))).resolves.toBe(false);
   });
 });
